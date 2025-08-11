@@ -1,0 +1,23 @@
+const { request } = require("express");
+const mongoose = require("mongoose");
+
+const printSchema = new mongoose.Schema({
+  file: { type: String, required: true },
+  color: { type: String, enum: ["b/w", "colour"], required: true },
+  sides: { type: String, enum: ["1", "2"], required: true },
+  binding: {
+    type: String,
+    enum: ["none", "spiral", "stick", "soft", "book"],
+    default: "none",
+  },
+  copies: { type: Number, required: true, default: 1 },
+  address: { type: String, required: true },
+  description: { type: String },
+  userid: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  transctionid: { type: String, required: true },
+  orderDate: { type: Date, default: Date.now },
+});
+
+const Prints = mongoose.model("Prints", printSchema);
+
+module.exports = Prints;
