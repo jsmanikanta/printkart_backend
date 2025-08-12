@@ -13,6 +13,22 @@ mongoose
   .then(() => console.log("Database connected successfully"))
   .catch((err) => console.error("Database connection error:", err));
 
+const allowedOrigins = [
+  'http://localhost:5173',   
+  'https://your-frontend-domain.com' 
+];
+
+app.use(cors({
+  origin: function (origin, cb) {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true, // required if using cookies/session across origins
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
+
+app.options('*', cors());
 // Import routes
 const userroute = require("./routes/userroute");
 const orders = require("./routes/ordersroute");
