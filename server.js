@@ -27,6 +27,7 @@ app.use(cors({
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
 }));
+app.set('trust proxy', 1);
 
 app.options('*', cors());
 // Import routes
