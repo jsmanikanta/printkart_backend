@@ -2,7 +2,7 @@ const User = require("./models/user");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-const secretKey = process.env.secretkey;
+const secretkey = process.env.secretkey;
 
 const verifyToken = async (req, res, next) => {
   const token =
@@ -14,7 +14,7 @@ const verifyToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, secretKey);
+    const decoded = jwt.verify(token, secretkey);
     const user = await User.findById(decoded.userId);
 
     if (!user) {
