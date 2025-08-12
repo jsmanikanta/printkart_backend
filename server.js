@@ -15,28 +15,25 @@ mongoose
 
 const allowedOrigins = [
   'http://localhost:5173',
-  // 'https://your-frontend-domain.com' // Add your frontend production URL here
+  // 'https://your-frontend-domain.com'
 ];
 
-app.set('trust proxy', 1); // Required if behind a proxy like Render with Secure cookies
+app.set('trust proxy', 1);
 
-// Configure CORS once, properly
 app.use(cors({
   origin: function (origin, cb) {
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
-  credentials: true, // to allow cookies across origins
+  credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
 }));
-
-app.options('*', cors()); // enable pre-flight for all routes
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Import routes
 const userroute = require("./routes/userroute");
 const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
@@ -47,14 +44,12 @@ app.get("/", (req, res) => {
 
 app.use("/user", userroute);
 app.use("/orders", orders);
-app.use("/admin", admin); // Added admin route usage (you imported it but didn't use it)
+app.use("/admin", admin);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Removed duplicate orders mount on /api - uncomment and fix if needed
-// app.use("/api", orders);
-
-const port = process.env.PORT || 5000; // Use uppercase PORT by convention
+const port = process.env.PORT || 5000;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+
