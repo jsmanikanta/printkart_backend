@@ -14,8 +14,8 @@ mongoose
   .catch((err) => console.error("Database connection error:", err));
 
 const allowedOrigins = [
-  'http://localhost:5173',   
-  'https://your-frontend-domain.com' 
+  'http://localhost:5173',  
+  //'https://your-frontend-domain.com' 
 ];
 
 app.use(cors({
