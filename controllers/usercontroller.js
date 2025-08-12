@@ -13,7 +13,7 @@ const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const secretKey = process.env.secretKey;
+const secretkey = process.env.secretkey;
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
