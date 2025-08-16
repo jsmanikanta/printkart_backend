@@ -13,7 +13,7 @@ const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const secretKey = process.env.secretKey;
+const secretkey = process.env.secretkey;
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
@@ -64,7 +64,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, secretKey, {
+    const token = jwt.sign({ userId: user._id }, secretkey, {
       expiresIn: "3000s",
     });
     res.status(200).json({ success: true, token });
