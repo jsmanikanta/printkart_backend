@@ -9,20 +9,28 @@ const verifyToken = require("../verifyToken");
 router.post("/orderprints", verifyToken, upload.single("file"), orderPrint);
 
 router.post("/sendOrderEmail", async (req, res) => {
-  const { pages, colorType, sideType, copies, spiral, transactionId, total } = req.body;
+  const { pages, colorType, sideType, copies, spiral, transactionId, total } =
+    req.body;
 
   if (
-    !pages || !colorType || !sideType || !copies || !transactionId || total === undefined
+    !pages ||
+    !colorType ||
+    !sideType ||
+    !copies ||
+    !transactionId ||
+    total === undefined
   ) {
-    return res.status(400).json({ success: false, error: "Missing order details" });
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing order details" });
   }
 
   try {
     let transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER,   
-        pass: process.env.EMAIL_PASS,    
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
@@ -50,6 +58,5 @@ router.post("/sendOrderEmail", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 module.exports = router;
