@@ -38,6 +38,9 @@ const orderPrint = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const {
+      name,
+      email,
+      mobile,
       color,
       sides,
       delivery,
@@ -63,6 +66,9 @@ const orderPrint = async (req, res) => {
 
     const newOrder = new Prints({
       file: savedFilePath,
+      name,
+      email,
+      mobile,
       color,
       sides,
       delivery: delivery || "Home",
@@ -92,6 +98,9 @@ Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
 
 Details:
+- name:${newOrder.name}
+- email:${newOrder.email}
+- mobile number:${newOrder.mobile}
 - Color: ${newOrder.color}
 - Sides: ${newOrder.sides}
 - Binding: ${newOrder.binding}
@@ -137,6 +146,9 @@ const getAllPrintOrders = async (req, res) => {
 
     res.status(200).json({
       orders: orders.map((order) => ({
+        name: order.name,
+        email: order.email,
+        mobile: order.mobile,
         id: order._id,
         file: order.file,
         color: order.color,

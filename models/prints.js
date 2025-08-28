@@ -2,6 +2,9 @@ const { request } = require("express");
 const mongoose = require("mongoose");
 
 const printSchema = new mongoose.Schema({
+  email: { type: String },
+  name:{type:String,required:true},
+  mobile: { type: String, required: true },
   file: { type: String, required: true },
   color: { type: String, enum: ["b/w", "colour"], required: true },
   sides: { type: String, enum: ["1", "2"], required: true },
