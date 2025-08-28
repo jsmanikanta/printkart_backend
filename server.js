@@ -28,6 +28,7 @@ app.get("/", (req, res) => {
 
 app.use("/user", userroute);
 app.use("/orders", orders);
+app.use("/admin",admin);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use("/api", orders);
 

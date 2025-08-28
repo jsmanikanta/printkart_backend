@@ -42,6 +42,9 @@ const orderPrint = async (req, res) => {
       sides,
       delivery,
       address,
+      college,
+      year,
+      section,
       description,
       transctionid,
       binding,
@@ -64,12 +67,15 @@ const orderPrint = async (req, res) => {
       sides,
       delivery: delivery || "Home",
       address,
+      college,
+      year,
+      section,
       description,
       transctionid,
       userid: userId,
       orderDate: new Date(),
       binding: binding || "none",
-      copies: copies || 1, 
+      copies: copies || 1,
     });
 
     await newOrder.save();
@@ -92,6 +98,7 @@ Details:
 - Copies:${newOrder.copies}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
+- Address:${newOrder.college},${newOrder.year},${newOrder.section}
 - Description: ${newOrder.description || "N/A"}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
   `,
@@ -136,6 +143,9 @@ const getAllPrintOrders = async (req, res) => {
         sides: order.sides,
         delivery: order.delivery,
         address: order.address,
+        college: order.college,
+        year: order.year,
+        section: order.section,
         description: order.description,
         orderDate: order.orderDate,
         transctionid: order.transctionid,

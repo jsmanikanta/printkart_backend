@@ -7,7 +7,7 @@ const orders = require("../controllers/orderprints");
 const verifyToken = require("../verifyToken"); 
 
 router.get("/users", verifyToken, users.getAllUsersWithPrints);
-router.get("/print-orders", verifyToken, orders.getAllPrintOrders);
+router.get("/printorders", verifyToken, orders.getAllPrintOrders);
 
 
 module.exports = router;
