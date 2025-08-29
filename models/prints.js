@@ -14,7 +14,7 @@ const printSchema = new mongoose.Schema({
     default: "none",
   },
   copies: { type: Number, required: true, default: 1 },
-  address: { type: String, required: true },
+  address: { type: String, },
   college: { type: String },
   year: { type: String },
   section: { type: String },
