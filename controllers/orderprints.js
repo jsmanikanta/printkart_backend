@@ -57,7 +57,7 @@ const orderPrint = async (req, res) => {
     if (!color || !sides || !address || !transctionid) {
       return res.status(400).json({ message: "Required fields missing" });
     }
-
+    console.log("Req.file:", req.file);
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
