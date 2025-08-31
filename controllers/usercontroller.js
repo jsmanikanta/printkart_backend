@@ -45,8 +45,6 @@ export const Register = async (req, res) => {
 
 export const login = async (req, res) => {
   const { identifier, password } = req.body;
-  console.log("login initiated", identifier);
-
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
@@ -60,10 +58,22 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: "Invalid email or phone format" });
     }
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    // Check if user role is admin
+    if (user.role !== "admin") {
+      return res.status(403).json({ error: "Access denied. Admins only." });
+    }
+
+    // Generate token including user role, userId
     const token = jwt.sign({ userId: user._id, role: user.role }, secretkey, {
       expiresIn: "300s",
     });
@@ -74,11 +84,9 @@ export const login = async (req, res) => {
       user: {
         email: user.email,
         fullname: user.fullname,
-        role: user.role, 
+        role: user.role,
       },
     });
-
-    res.status(200).json({ success: true, token });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
