@@ -3,7 +3,7 @@ const router = express.Router();
 const nodemailer = require("nodemailer");
 
 const { upload, orderPrint } = require("../controllers/orderprints");
-const verifyToken = require("../verifyToken");
+const { verifyToken } = require("../verifyToken");
 // Route for order print: verify token and upload using memory storage
 router.post("/orderprints", verifyToken, upload.single("file"), orderPrint);
 

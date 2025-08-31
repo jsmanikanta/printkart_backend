@@ -12,24 +12,27 @@ const verifyToken = async (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, secretkey);
+    req.user = decoded;
+
     const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
     req.userId = user._id;
-    req.user = user;  // attach user object here for role checking
+    req.user = user; 
     next();
   } catch (error) {
     console.error(error);
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ error: "Token expired, please login again" });
+      return res
+        .status(401)
+        .json({ error: "Token expired, please login again" });
     }
     return res.status(403).json({ error: "Invalid or expired token" });
   }
 };
 
 const authorizeAdmin = (req, res, next) => {
-  // Make sure req.user is available (set in verifyToken)
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admins only." });
   }
