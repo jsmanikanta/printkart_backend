@@ -1,12 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const path = require("path");
-
-const users = require("../controllers/usercontroller");
-const orders = require("../controllers/orderprints");
+const { getAllOrders } = require("../controllers/admin");
 const verifyToken = require("../verifyToken");
 
-router.get("/users", users.getAllUsersWithPrints);
-router.get("/printorders", orders.getAllPrintOrders);
+router.get("/admin/printorders", verifyToken, authorizeAdmin, getAllOrders);
 
 module.exports = router;
