@@ -22,7 +22,7 @@ const getAllOrders = async (req, res) => {
         section: order.section,
         description: order.description,
         orderDate: order.orderDate,
-        transactionId: order.transctionid, // Use correct field name as per your model
+        transactionId: order.transctionid, 
         binding: order.binding || "none",
         status: order.status || "Pending",
         copies: order.copies,
