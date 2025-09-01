@@ -68,10 +68,10 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    // Check if user role is admin
-    if (user.role !== "admin") {
-      return res.status(403).json({ error: "Access denied. Admins only." });
-    }
+    // Optionally, restrict banned or suspended users
+    // if (user.status === "banned") {
+    //   return res.status(403).json({ error: "Your account is banned." });
+    // }
 
     // Generate token including user role, userId
     const token = jwt.sign({ userId: user._id, role: user.role }, secretkey, {
@@ -92,6 +92,7 @@ export const login = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 export function setupUploadsStatic(app) {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
