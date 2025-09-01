@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const path = require('path');
+const path = require("path");
 
 dotenv.config();
 
@@ -16,7 +16,7 @@ mongoose
 // Import routes
 const userroute = require("./routes/userroute");
 const orders = require("./routes/ordersroute");
-const admin=require("./routes/adminroute");
+const admin = require("./routes/adminroute");
 
 app.use(cors());
 app.use(express.json());
@@ -28,9 +28,8 @@ app.get("/", (req, res) => {
 
 app.use("/user", userroute);
 app.use("/orders", orders);
-app.use("/admin",admin);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use("/api", orders);
+app.use("/admin", admin);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Start server
 const port = process.env.port || 5000;
