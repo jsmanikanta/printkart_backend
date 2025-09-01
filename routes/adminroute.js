@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { getAllOrders, getOrderById } = require("../controllers/admin");
+const { getOrderById } = require("../controllers/admin");
 const { verifyToken, authorizeAdmin } = require("../verifyToken");
 
+router.post("/admin/printorders", verifyToken, authorizeAdmin, getOrderById);
 router.get("/admin/printorders", verifyToken, authorizeAdmin, getAllOrders);
 router.get(
   "/admin/printorders/:orderId",
