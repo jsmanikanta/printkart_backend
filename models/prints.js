@@ -1,9 +1,8 @@
-const { request } = require("express");
 const mongoose = require("mongoose");
 
 const printSchema = new mongoose.Schema({
   email: { type: String },
-  name:{type:String,required:true},
+  name: { type: String, required: true },
   mobile: { type: String, required: true },
   file: { type: String, required: true },
   color: { type: String, enum: ["b/w", "colour"], required: true },
@@ -14,7 +13,7 @@ const printSchema = new mongoose.Schema({
     default: "none",
   },
   copies: { type: Number, required: true, default: 1 },
-  address: { type: String, },
+  address: { type: String },
   college: { type: String },
   year: { type: String },
   section: { type: String },
