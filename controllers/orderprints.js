@@ -20,6 +20,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+const path = require("path");
+const nodemailer = require("nodemailer");
+const User = require("../models/user");
+const Prints = require("../models/prints");
+
+// Configure your nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -37,6 +43,7 @@ const orderPrint = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Destructure frontend fields from req.body including student-specific ones
     const {
       name,
       email,
@@ -45,25 +52,27 @@ const orderPrint = async (req, res) => {
       sides,
       delivery,
       address,
-      college,
-      year,
-      section,
+      collegeName,
+      yearOfStudy,
+      classSection,
       description,
       transctionid,
       binding,
       copies,
     } = req.body;
 
+    // Basic validations
     if (!color || !sides || !address || !transctionid) {
       return res.status(400).json({ message: "Required fields missing" });
     }
-    console.log("Req.file:", req.file);
+
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
 
     const savedFilePath = path.join("uploads", req.file.filename);
 
+    // Create new Prints document with correct mapping
     const newOrder = new Prints({
       file: savedFilePath,
       name,
@@ -73,9 +82,9 @@ const orderPrint = async (req, res) => {
       sides,
       delivery: delivery || "Home",
       address,
-      college,
-      year,
-      section,
+      college: collegeName,
+      year: yearOfStudy,
+      section: classSection,
       description,
       transctionid,
       userid: userId,
@@ -86,7 +95,7 @@ const orderPrint = async (req, res) => {
 
     await newOrder.save();
 
-    // Send order notification email to admin
+    // Prepare and send notification email to admin
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
@@ -98,22 +107,23 @@ Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
 
 Details:
-- name:${newOrder.name}
-- email:${newOrder.email}
-- mobile number:${newOrder.mobile}
+- Name: ${newOrder.name}
+- Email: ${newOrder.email}
+- Mobile Number: ${newOrder.mobile}
 - Color: ${newOrder.color}
 - Sides: ${newOrder.sides}
 - Binding: ${newOrder.binding}
-- Copies:${newOrder.copies}
+- Copies: ${newOrder.copies}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
-- Address:${newOrder.college},${newOrder.year},${newOrder.section}
+- College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${
+        newOrder.section
+      }
 - Description: ${newOrder.description || "N/A"}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
-  `,
+      `,
       attachments: [
         {
-          // Path to the uploaded file on your server
           path: path.join(__dirname, "..", newOrder.file),
           filename: path.basename(newOrder.file),
         },
@@ -136,6 +146,8 @@ Details:
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+module.exports = { orderPrint };
 
 // Fetch all print orders
 const getAllPrintOrders = async (req, res) => {
