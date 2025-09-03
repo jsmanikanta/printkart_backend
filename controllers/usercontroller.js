@@ -67,13 +67,6 @@ export const login = async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({ error: "Invalid username or password" });
     }
-
-    // Optionally, restrict banned or suspended users
-    // if (user.status === "banned") {
-    //   return res.status(403).json({ error: "Your account is banned." });
-    // }
-
-    // Generate token including user role, userId
     const token = jwt.sign({ userId: user._id, role: user.role }, secretkey, {
       expiresIn: "300s",
     });
@@ -92,7 +85,6 @@ export const login = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 export function setupUploadsStatic(app) {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -113,7 +105,7 @@ export const getUserById = async (req, res) => {
     }
 
     const orders = await Prints.find({ userid: userId }).select(
-      "file color sides delivery address description orderDate status copies"
+      "name email mobile file color sides binding copies address college year section description delivery transctionid orderDate"
     );
 
     res.status(200).json({
@@ -127,18 +119,24 @@ export const getUserById = async (req, res) => {
         name: order.name,
         email: order.email,
         mobile: order.mobile,
-        file: `${process.env.BASE_URL}/uploads/${order.file}`,
+        file: order.file
+          ? `${process.env.BASE_URL}/uploads/${order.file.replace(
+              /^uploads[\\/]/,
+              ""
+            )}`
+          : null,
         color: order.color,
         sides: order.sides,
-        delivery: order.delivery,
+        binding: order.binding,
+        copies: order.copies,
         college: order.college,
         year: order.year,
         section: order.section,
-        copies: order.copies,
         address: order.address,
         description: order.description,
+        transctionid: order.transctionid,
+        delivery: order.delivery,
         orderDate: order.orderDate,
-        status: order.status || "Pending",
       })),
     });
   } catch (error) {
