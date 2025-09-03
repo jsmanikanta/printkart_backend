@@ -19,12 +19,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-const path = require("path");
-const nodemailer = require("nodemailer");
-const User = require("../models/user");
-const Prints = require("../models/prints");
-
 // Configure your nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
