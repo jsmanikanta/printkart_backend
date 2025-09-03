@@ -10,11 +10,9 @@ const getAllOrders = async (req, res) => {
     res.status(200).json({
       orders: orders.map((order) => ({
         _id: order._id,
-        fullName:
-          order.fullName || (order.userid && order.userid.fullname) || "-",
-        email: order.email || (order.userid && order.userid.email) || "-",
-        mobile:
-          order.mobile || (order.userid && order.userid.mobileNumber) || "-",
+        fullName: order.userid?.fullname || order.name || "-",
+        email: order.userid?.email || order.email || "-",
+        mobile: order.userid?.mobileNumber || order.mobile || "-",
         file: order.file,
         color: order.color,
         sides: order.sides,
@@ -23,7 +21,7 @@ const getAllOrders = async (req, res) => {
         college: order.college || "-",
         year: order.year || "-",
         section: order.section || "-",
-        address: order.address,
+        address: order.address || "-",
         description: order.description || "-",
         transctionid: order.transctionid,
         orderDate: order.orderDate,
@@ -36,21 +34,25 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+
 const getOrderById = async (req, res) => {
   const { orderId } = req.params;
   try {
+    // Populate user details: fullname, email, mobileNumber
     const order = await Prints.findById(orderId).populate(
       "userid",
       "fullname email mobileNumber"
     );
+
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
     }
+
     res.status(200).json({
       id: order._id,
-      name: order.name,
-      email: order.email,
-      mobile: order.mobile,
+      name: order.userid?.fullname || order.name, // Prefer logged in user's fullname
+      email: order.userid?.email || order.email,
+      mobile: order.userid?.mobileNumber || order.mobile,
       file: order.file,
       color: order.color,
       sides: order.sides,
