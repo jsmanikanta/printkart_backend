@@ -1,10 +1,11 @@
 const path = require("path");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
+const multer = require("multer");
 const User = require("../models/user");
 const Prints = require("../models/prints");
-const multer = require("multer");
 
+// Multer setup for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, "..", "uploads");
@@ -17,9 +18,9 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname));
   },
 });
-
 const upload = multer({ storage });
-// Configure your nodemailer transporter
+
+// Nodemailer transporter configuration
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -37,7 +38,6 @@ const orderPrint = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Destructure frontend fields from req.body including student-specific ones
     const {
       name,
       email,
@@ -55,18 +55,15 @@ const orderPrint = async (req, res) => {
       copies,
     } = req.body;
 
-    // Basic validations
     if (!color || !sides || !address || !transctionid) {
       return res.status(400).json({ message: "Required fields missing" });
     }
-
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
 
     const savedFilePath = path.join("uploads", req.file.filename);
 
-    // Create new Prints document with correct mapping
     const newOrder = new Prints({
       file: savedFilePath,
       name,
@@ -89,7 +86,6 @@ const orderPrint = async (req, res) => {
 
     await newOrder.save();
 
-    // Prepare and send notification email to admin
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
@@ -110,9 +106,7 @@ Details:
 - Copies: ${newOrder.copies}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
-- College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${
-        newOrder.section
-      }
+- College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${newOrder.section}
 - Description: ${newOrder.description || "N/A"}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
       `,
@@ -132,16 +126,12 @@ Details:
       }
     });
 
-    res
-      .status(201)
-      .json({ message: "Order placed successfully", order: newOrder });
+    res.status(201).json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-module.exports = { orderPrint };
 
 // Fetch all print orders
 const getAllPrintOrders = async (req, res) => {
