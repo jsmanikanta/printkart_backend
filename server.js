@@ -17,6 +17,7 @@ mongoose
 const userroute = require("./routes/userroute");
 const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
+const books = require("./routes/bookroute");
 
 app.use(cors());
 app.use(express.json());
@@ -28,6 +29,7 @@ app.get("/", (req, res) => {
 
 app.use("/user", userroute);
 app.use("/orders", orders);
+app.use("/books", books);
 app.use("/admin", admin);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
