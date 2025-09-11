@@ -43,6 +43,14 @@ const sellbooksschema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  selltype: {
+    type: [
+      {
+        type: String,
+        enum: ["sell", "donate"],
+      },
+    ],
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",

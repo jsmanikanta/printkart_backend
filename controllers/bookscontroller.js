@@ -5,7 +5,6 @@ const multer = require("multer");
 
 const sellbook = require("../models/sellbooks");
 const User = require("../models/user");
-const { json } = require("stream/consumers");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -61,6 +60,7 @@ const Sellbook = async (req, res) => {
       categeory,
       description,
       location,
+      selltype,
     });
     await newBook.save();
 
@@ -74,7 +74,8 @@ Book details:
 - Price: ${newBook.price}
 - Category: ${newBook.categeory}
 - Description: ${newBook.description}
-- Location: ${newBook.location}`,
+- Location: ${newBook.location}
+- sell type : ${newBook.selltype}`,
       attachments: [
         {
           path: path.join(__dirname, "..", newBook.image),
@@ -115,6 +116,7 @@ const getBookById = async (req, res) => {
       image: book.image,
       price: book.price,
       categeory: book.categeory,
+      selltype: book.selltype,
       description: book.description,
       location: book.location,
       user: book.user
