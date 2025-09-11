@@ -61,6 +61,7 @@ const Sellbook = async (req, res) => {
       description,
       location,
       selltype,
+      condition,
     });
     await newBook.save();
 
@@ -75,7 +76,8 @@ Book details:
 - Category: ${newBook.categeory}
 - Description: ${newBook.description}
 - Location: ${newBook.location}
-- sell type : ${newBook.selltype}`,
+- sell type : ${newBook.selltype}
+-Book's Condition : ${newBook.condition}`,
       attachments: [
         {
           path: path.join(__dirname, "..", newBook.image),
@@ -117,6 +119,7 @@ const getBookById = async (req, res) => {
       price: book.price,
       categeory: book.categeory,
       selltype: book.selltype,
+      condition: book.condition,
       description: book.description,
       location: book.location,
       user: book.user

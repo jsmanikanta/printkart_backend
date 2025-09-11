@@ -13,6 +13,10 @@ const sellbooksschema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  condition :{
+    type: String,
+    required: true,
+  },
   categeory: {
     type: [
       {
