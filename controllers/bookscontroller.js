@@ -39,7 +39,7 @@ const Sellbook = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { name, price, categeory, description, location } = req.body;
+    const { name, price, categeory, description, location,selltype,condition } = req.body;
     if (!name || !price || !description || !location) {
       return res.status(400).json({ message: "Required fields missing" });
     }
