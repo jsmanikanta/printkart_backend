@@ -13,30 +13,8 @@ const sellbooksschema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  condition :{
+  condition: {
     type: String,
-    required: true,
-  },
-  categeory: {
-    type: [
-      {
-        type: String,
-        enum: [
-          "schools-TextBooks",
-          "jee main/advance",
-          "engg textbooks",
-          "neet",
-          "medical-textbooks",
-          "b.com/b.sc",
-          "gate",
-          "cat",
-          "bank exams",
-          "rrb",
-          "upsc",
-          "others",
-        ],
-      },
-    ],
     required: true,
   },
   description: {
@@ -47,14 +25,30 @@ const sellbooksschema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  selltype: {
-    type: [
-      {
-        type: String,
-        enum: ["sell", "donate"],
-      },
+  categeory: {
+    type: String,
+    enum: [
+      "schools-TextBooks",
+      "jee main/advance",
+      "engg textbooks",
+      "neet",
+      "medical-textbooks",
+      "b.com/b.sc",
+      "gate",
+      "cat",
+      "bank exams",
+      "rrb",
+      "upsc",
+      "others",
     ],
+    required: true,
   },
+  selltype: {
+    type: String,
+    enum: ["sell", "donate"],
+    required: true,
+  },
+
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
