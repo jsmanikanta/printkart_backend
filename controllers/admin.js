@@ -36,36 +36,34 @@ const getAllOrders = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const orders = await Prints.find()
-      .sort({ orderDate: -1 })
-      .populate("userid", "fullname email mobileNumber");
+    const books = await Sellbooks.find()
+      .sort({ _id: -1 })
+      .populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
-      orders: orders.map((order) => ({
-        _id: order._id,
-        fullName: order.userid?.fullname || order.name || "-",
-        email: order.userid?.email || order.email || "-",
-        mobile: order.userid?.mobileNumber || order.mobile || "-",
-        file: order.file,
-        color: order.color,
-        sides: order.sides,
-        binding: order.binding || "none",
-        copies: order.copies,
-        college: order.college || "-",
-        year: order.year || "-",
-        section: order.section || "-",
-        address: order.address || "-",
-        description: order.description || "-",
-        transctionid: order.transctionid,
-        orderDate: order.orderDate,
-        status: order.status || "Pending",
-      })),
+      books: books.map((book) => ({
+        _id: book._id,
+        name: book.name || "-",
+        image: book.image || "-",
+        status: book.status,
+        price: book.price !== undefined ? book.price : "-",
+        updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
+        condition: book.condition || "-",
+        description: book.description || "-",
+        location: book.location || "-",
+        category: book.categeory || "-", // (keep this key the same as your DB)
+        selltype: book.selltype || "-",
+        userFullName: book.user?.fullname || "-",
+        userEmail: book.user?.email || "-",
+        userMobile: book.user?.mobileNumber || "-"
+      }))
     });
   } catch (error) {
-    console.error("Error fetching orders:", error);
+    console.error("Error fetching books:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 const updateStatus = async (req, res) => {
   const { bookId } = req.params;
