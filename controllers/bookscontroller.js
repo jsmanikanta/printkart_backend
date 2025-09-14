@@ -74,6 +74,7 @@ const Sellbook = async (req, res) => {
       location,
       selltype,
       condition,
+      user: userId,
     });
     await newBook.save();
 

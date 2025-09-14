@@ -45,7 +45,7 @@ const getAllBooks = async (req, res) => {
         _id: book._id,
         name: book.name || "-",
         image: book.image || "-",
-        status: book.status, 
+        status: book.status,
         price: book.price !== undefined ? book.price : "-",
         updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
         condition: book.condition || "-",
@@ -69,7 +69,6 @@ const updateStatus = async (req, res) => {
   const { status, price } = req.body;
 
   try {
-    // Validate status value
     if (!["Accepted", "Rejected"].includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
@@ -85,7 +84,6 @@ const updateStatus = async (req, res) => {
     }
 
     await book.save();
-
     res.status(200).json({ message: `Book ${status} successfully`, book });
   } catch (error) {
     console.error("Error updating book status and price:", error);
