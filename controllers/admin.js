@@ -1,6 +1,6 @@
 const Prints = require("../models/prints");
+const Sellbooks = require("../models/sellbooks");
 
-// Get all orders for admin view
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Prints.find()
@@ -34,52 +34,63 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-
-const getOrderById = async (req, res) => {
-  const { orderId } = req.params;
+const getAllBooks = async (req, res) => {
   try {
-    // Populate user details: fullname, email, mobileNumber
-    const order = await Prints.findById(orderId).populate(
-      "userid",
-      "fullname email mobileNumber"
-    );
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    const books = await Sellbooks.find()
+      .sort({ _id: -1 })
+      .populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
-      id: order._id,
-      name: order.userid?.fullname || order.name, // Prefer logged in user's fullname
-      email: order.userid?.email || order.email,
-      mobile: order.userid?.mobileNumber || order.mobile,
-      file: order.file,
-      color: order.color,
-      sides: order.sides,
-      delivery: order.delivery,
-      address: order.address,
-      college: order.college,
-      year: order.year,
-      section: order.section,
-      description: order.description,
-      orderDate: order.orderDate,
-      transctionid: order.transctionid,
-      binding: order.binding || "none",
-      status: order.status || "Pending",
-      copies: order.copies,
-      user: order.userid
-        ? {
-            id: order.userid._id,
-            fullname: order.userid.fullname,
-            email: order.userid.email,
-            mobileNumber: order.userid.mobileNumber,
-          }
-        : null,
+      books: books.map((book) => ({
+        _id: book._id,
+        name: book.name || "-",
+        image: book.image || "-",
+        status: book.status, 
+        price: book.price !== undefined ? book.price : "-",
+        updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
+        condition: book.condition || "-",
+        description: book.description || "-",
+        location: book.location || "-",
+        category: book.categeory || "-",
+        selltype: book.selltype || "-",
+        userFullName: book.user?.fullname || "-",
+        userEmail: book.user?.email || "-",
+        userMobile: book.user?.mobileNumber || "-",
+      })),
     });
   } catch (error) {
-    console.error("Error fetching order details:", error);
+    console.error("Error fetching books:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-module.exports = { getAllOrders, getOrderById };
+const updateStatus = async (req, res) => {
+  const { bookId } = req.params;
+  const { status, price } = req.body;
+
+  try {
+    // Validate status value
+    if (!["Accepted", "Rejected"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const book = await Sellbooks.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
+
+    book.status = status;
+    if (price !== undefined) {
+      book.price = price;
+    }
+
+    await book.save();
+
+    res.status(200).json({ message: `Book ${status} successfully`, book });
+  } catch (error) {
+    console.error("Error updating book status and price:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = { getAllOrders, getAllBooks, updateStatus };

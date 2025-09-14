@@ -1,10 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const path = require("path");
-const { getAllOrders, getOrderById } = require("../controllers/admin");
-const { verifyToken, authorizeAdmin } = require("../verifyToken");
+const { getAllOrders, getAllBooks, updateStatus } = require("../controllers/admin");
 
 router.get("/printorders", getAllOrders);
-router.get("/printorders/:orderId", verifyToken, authorizeAdmin, getOrderById);
+router.get("/booksforsale", getAllBooks);
+router.post('/updatestatus', updateStatus)
 
 module.exports = router;

@@ -53,6 +53,14 @@ const sellbooksschema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
   },
+  status: {
+    type: String,
+    enum: ["Pending", "Accepted", "Rejected", "SoldUser", "SoldAdmin"],
+    default: "Pending",
+  },
+  updatedPrice: {
+    type: Number,
+  },
 });
 
 const Sellbooks = mongoose.model("Sellbooks", sellbooksschema);
