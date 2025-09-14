@@ -64,6 +64,7 @@ const getAllBooks = async (req, res) => {
   }
 };
 
+
 const updateStatus = async (req, res) => {
   const { bookId } = req.params;
   const { status, sellingPrice } = req.body;
