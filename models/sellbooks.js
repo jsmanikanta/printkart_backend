@@ -55,7 +55,7 @@ const sellbooksschema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["Pending", "Accepted", "Rejected", "SoldUser", "SoldAdmin"],
+    enum: ["Pending", "Accepted", "Rejected"],
     default: "Pending",
   },
   updatedPrice: {
