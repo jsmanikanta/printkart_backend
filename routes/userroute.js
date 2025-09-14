@@ -7,7 +7,8 @@ const forgot = require("../controllers/forgotpassword");
 
 router.post("/register", usercontrol.Register);
 router.post("/login", usercontrol.login);
-router.get("/profile", verifyToken, usercontrol.getUserById);
+router.get("/printorders", verifyToken, usercontrol.getPrintsById);
+router.get("/soldbooks" ,verifyToken, usercontrol.getBooksSoldById);
 router.post("/reset-password", forgot.resetPasswordWithoutOTP);
 
 module.exports = router;

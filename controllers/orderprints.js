@@ -133,7 +133,6 @@ Details:
   }
 };
 
-// Fetch all print orders
 const getAllPrintOrders = async (req, res) => {
   try {
     const orders = await Prints.find()

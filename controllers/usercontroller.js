@@ -3,6 +3,7 @@ dotenv.config();
 
 import User from "../models/user.js";
 import Prints from "../models/prints.js";
+import Sellbooks from "../models/sellbooks.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import express from "express";
@@ -90,9 +91,9 @@ export function setupUploadsStatic(app) {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 }
 
-export const getUserById = async (req, res) => {
+export const getPrintsById = async (req, res) => {
   try {
-    const userId = req.userId; // From verified token middleware
+    const userId = req.userId;
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
@@ -104,9 +105,12 @@ export const getUserById = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const orders = await Prints.find({ userid: userId }).select(
-      "name email mobile file color sides binding copies address college year section description delivery transctionid orderDate"
-    );
+    // Fetch orders and sort by orderDate descending
+    const orders = await Prints.find({ userid: userId })
+      .select(
+        "name email mobile file color sides binding copies address college year section description delivery transctionid orderDate"
+      )
+      .sort({ orderDate: -1 });
 
     res.status(200).json({
       user: {
@@ -145,45 +149,53 @@ export const getUserById = async (req, res) => {
   }
 };
 
-export const getAllUsersWithPrints = async (req, res) => {
+export const getBooksSoldById = async (req, res) => {
   try {
-    const users = await User.find().select("fullname mobileNumber email");
-    const usersWithPrints = await Promise.all(
-      users.map(async (user) => {
-        const orders = await Prints.find({ userid: user._id }).select(
-          "file color sides delivery address description orderDate status"
-        );
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "User ID missing from token" });
+    }
 
-        return {
-          id: user._id,
-          fullname: user.fullname,
-          mobileNumber: user.mobileNumber,
-          email: user.email,
-          orders: orders.map((order) => ({
-            id: order._id,
-            name: order.name,
-            email: order.email,
-            mobile: order.mobile,
-            file: `${process.env.BASE_URL}/uploads/${order.file}`,
-            color: order.color,
-            sides: order.sides,
-            delivery: order.delivery,
-            college: order.college,
-            year: order.year,
-            section: order.section,
-            copies: order.copies,
-            address: order.address,
-            description: order.description,
-            orderDate: order.orderDate,
-            status: order.status || "Pending",
-          })),
-        };
-      })
+    const user = await User.findById(userId).select(
+      "fullname mobileNumber email"
     );
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    res.status(200).json({ users: usersWithPrints });
+    const books = await Sellbooks.find({ user: userId })
+      .select(
+        "name image price condition description location categeory selltype status updatedPrice"
+      )
+      .sort({ orderDate: -1 });
+
+    res.status(200).json({
+      user: {
+        fullname: user.fullname,
+        mobileNumber: user.mobileNumber,
+        email: user.email,
+      },
+      books: books.map((book) => ({
+        id: book._id,
+        name: book.name,
+        image: book.image
+          ? `${process.env.BASE_URL}/uploads/${book.image.replace(
+              /^uploads[\\/]/,
+              ""
+            )}`
+          : null,
+        price: book.price,
+        condition: book.condition,
+        description: book.description,
+        location: book.location,
+        category: book.categeory,
+        sellType: book.selltype,
+        status: book.status,
+        updatedPrice: book.updatedPrice || null,
+      })),
+    });
   } catch (error) {
-    console.error("Error fetching users with prints:", error);
+    console.error("Error fetching user data:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
