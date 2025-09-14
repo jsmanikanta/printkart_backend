@@ -18,7 +18,7 @@ const printSchema = new mongoose.Schema({
   year: { type: String },
   section: { type: String },
   description: { type: String },
-  userid: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
   transctionid: { type: String, required: true },
   orderDate: { type: Date, default: Date.now },
 });
