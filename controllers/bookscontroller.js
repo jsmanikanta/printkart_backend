@@ -48,20 +48,14 @@ const Sellbook = async (req, res) => {
       selltype,
       condition,
     } = req.body;
-    if (!name || !price || !description || !location) {
-      return res.status(400).json({ message: "Required fields missing" });
-    }
-    if (
-      !categeory ||
-      typeof categeory !== "string" ||
-      categeory.trim() === ""
-    ) {
-      return res.status(400).json({ message: "Required fields missing" });
-    }
 
-    if (!req.file) {
-      return res.status(400).json({ message: "File is required" });
-    }
+    if (!name || !price || !description || !location)
+      return res.status(400).json({ message: "Required fields missing" });
+
+    if (!categeory || typeof categeory !== "string" || categeory.trim() === "")
+      return res.status(400).json({ message: "Required category missing" });
+
+    if (!req.file) return res.status(400).json({ message: "File is required" });
 
     const savedFilePath = path.join("uploads", req.file.filename);
 
@@ -74,8 +68,9 @@ const Sellbook = async (req, res) => {
       location,
       selltype,
       condition,
-      user: userId,
+      user: userId, // Associate the user here
     });
+
     await newBook.save();
 
     const mailOptions = {
@@ -83,6 +78,7 @@ const Sellbook = async (req, res) => {
       to: "printkart0001@gmail.com",
       subject: "New book is ready to sell",
       text: `New book sold by ${user.email}
+
 Book details:
 - Name: ${newBook.name}
 - Price: ${newBook.price}
@@ -107,10 +103,12 @@ Book details:
       }
     });
 
-    res.status(201).json({ message: "Book added successfully", Book: newBook });
+    return res
+      .status(201)
+      .json({ message: "Book added successfully", Book: newBook });
   } catch (error) {
     console.error("Error adding book:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -120,12 +118,11 @@ const getBookById = async (req, res) => {
     const book = await sellbook
       .findById(id)
       .populate("user", "fullname email mobileNumber");
-
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       id: book._id,
       name: book.name,
       image: book.image,
@@ -146,7 +143,7 @@ const getBookById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching book:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 

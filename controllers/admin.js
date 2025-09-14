@@ -38,9 +38,9 @@ const getAllBooks = async (req, res) => {
   try {
     const books = await Sellbooks.find()
       .sort({ _id: -1 })
-      .populate("user", "fullname email mobileNumber");
+      .populate("user", "fullname email mobileNumber"); // make sure parentheses close here
 
-    res.status(200).json({
+    return res.status(200).json({
       books: books.map((book) => ({
         _id: book._id,
         name: book.name || "-",
@@ -60,13 +60,14 @@ const getAllBooks = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching books:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
+
 const updateStatus = async (req, res) => {
   const { bookId } = req.params;
-  const { status, price } = req.body;
+  const { status, sellingPrice } = req.body;
 
   try {
     if (!["Accepted", "Rejected"].includes(status)) {
@@ -79,16 +80,17 @@ const updateStatus = async (req, res) => {
     }
 
     book.status = status;
-    if (price !== undefined) {
-      book.price = price;
+    if (sellingPrice !== undefined) {
+      book.updatedPrice = sellingPrice; // Only update updatedPrice
     }
 
     await book.save();
-    res.status(200).json({ message: `Book ${status} successfully`, book });
+    return res.status(200).json({ message: `Book ${status} successfully`, book });
   } catch (error) {
-    console.error("Error updating book status and price:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error updating book status and selling price:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 module.exports = { getAllOrders, getAllBooks, updateStatus };
