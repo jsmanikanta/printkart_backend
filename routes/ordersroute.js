@@ -5,7 +5,6 @@ const path = require("path");
 
 const { upload, orderPrint } = require("../controllers/orderprints");
 const { verifyToken } = require("../verifyToken");
-// Route for order print: verify token and upload using memory storage
 router.post("/orderprints", verifyToken, upload.single("file"), orderPrint);
 
 router.post("/sendOrderEmail", async (req, res) => {

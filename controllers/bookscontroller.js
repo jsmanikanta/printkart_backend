@@ -126,7 +126,7 @@ const getBookById = async (req, res) => {
       id: book._id,
       name: book.name,
       image: book.image,
-      price: book.price,
+      price: book.updatedPrice,
       categeory: book.categeory,
       selltype: book.selltype,
       condition: book.condition,
@@ -149,7 +149,8 @@ const getBookById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Sellbooks.find()
+    const books = await sellbook
+      .find()
       .sort({ _id: -1 })
       .populate("user", "fullname email mobileNumber");
 
@@ -164,7 +165,7 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.categeory || "-", 
+        category: book.categeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
