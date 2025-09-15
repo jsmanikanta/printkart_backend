@@ -18,7 +18,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "Print orders",
+    folder: "Print_Orders",
     allowed_formats: ["pdf"],
   },
 });
