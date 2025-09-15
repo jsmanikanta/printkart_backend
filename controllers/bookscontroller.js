@@ -126,7 +126,7 @@ const getBookById = async (req, res) => {
       id: book._id,
       name: book.name,
       image: book.image,
-      price: book.price,
+      price: book.updatedPrice,
       categeory: book.categeory,
       selltype: book.selltype,
       condition: book.condition,
