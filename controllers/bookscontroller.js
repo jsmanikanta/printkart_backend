@@ -147,4 +147,34 @@ const getBookById = async (req, res) => {
   }
 };
 
-module.exports = { Sellbook, upload, getBookById };
+const getAllBooks = async (req, res) => {
+  try {
+    const books = await Sellbooks.find()
+      .sort({ _id: -1 })
+      .populate("user", "fullname email mobileNumber");
+
+    res.status(200).json({
+      books: books.map((book) => ({
+        _id: book._id,
+        name: book.name || "-",
+        image: book.image || "-",
+        status: book.status,
+        price: book.price !== undefined ? book.price : "-",
+        updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
+        condition: book.condition || "-",
+        description: book.description || "-",
+        location: book.location || "-",
+        category: book.categeory || "-", 
+        selltype: book.selltype || "-",
+        userFullName: book.user?.fullname || "-",
+        userEmail: book.user?.email || "-",
+        userMobile: book.user?.mobileNumber || "-",
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching books:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = { Sellbook, upload, getBookById, getAllBooks };
