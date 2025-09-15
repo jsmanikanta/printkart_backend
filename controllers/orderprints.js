@@ -6,18 +6,23 @@ const User = require("../models/user");
 const Prints = require("../models/prints");
 
 // Multer setup for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "..", "uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath);
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "Print orders",
+    allowed_formats: ["pdf"],
   },
 });
+
 const upload = multer({ storage });
 
 // Nodemailer transporter configuration
@@ -58,14 +63,15 @@ const orderPrint = async (req, res) => {
     if (!color || !sides || !address || !transctionid) {
       return res.status(400).json({ message: "Required fields missing" });
     }
+
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
 
-    const savedFilePath = path.join("uploads", req.file.filename);
+    const imageUrl = req.file.path; // Cloudinary URL
 
     const newOrder = new Prints({
-      file: savedFilePath,
+      file: imageUrl,
       name,
       email,
       mobile,
@@ -92,10 +98,8 @@ const orderPrint = async (req, res) => {
       subject: "New Print Order Placed",
       text: `
 New print order placed by ${user.fullname}.
-
 Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
-
 Details:
 - Name: ${newOrder.name}
 - Email: ${newOrder.email}
@@ -106,14 +110,16 @@ Details:
 - Copies: ${newOrder.copies}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
-- College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${newOrder.section}
+- College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${
+        newOrder.section
+      }
 - Description: ${newOrder.description || "N/A"}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
-      `,
+`,
       attachments: [
         {
-          path: path.join(__dirname, "..", newOrder.file),
-          filename: path.basename(newOrder.file),
+          path: imageUrl,
+          filename: path.basename(imageUrl),
         },
       ],
     };
@@ -126,7 +132,9 @@ Details:
       }
     });
 
-    res.status(201).json({ message: "Order placed successfully", order: newOrder });
+    res
+      .status(201)
+      .json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
     res.status(500).json({ error: "Internal server error" });

@@ -2,31 +2,29 @@ const path = require("path");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
 const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const sellbook = require("../models/sellbooks");
 const User = require("../models/user");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "..", "uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath);
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
+require("dotenv").config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "Books",
+    allowed_formats: ["jpg", "jpeg", "png"],
   },
 });
+
+const upload = multer({ storage });
 
 const Sellbook = async (req, res) => {
   console.log("Request body:", req.body);
@@ -55,13 +53,14 @@ const Sellbook = async (req, res) => {
     if (!categeory || typeof categeory !== "string" || categeory.trim() === "")
       return res.status(400).json({ message: "Required category missing" });
 
+    // Cloudinary automatically stores the file and provides the URL at req.file.path
     if (!req.file) return res.status(400).json({ message: "File is required" });
 
-    const savedFilePath = path.join("uploads", req.file.filename);
+    const imageUrl = req.file.path; // Direct Cloudinary URL
 
     const newBook = new sellbook({
       name,
-      image: savedFilePath,
+      image: imageUrl, // Store Cloudinary image URL here
       price,
       categeory,
       description,
@@ -78,7 +77,6 @@ const Sellbook = async (req, res) => {
       to: "printkart0001@gmail.com",
       subject: "New book is ready to sell",
       text: `New book sold by ${user.email}
-
 Book details:
 - Name: ${newBook.name}
 - Price: ${newBook.price}
@@ -86,11 +84,11 @@ Book details:
 - Description: ${newBook.description}
 - Location: ${newBook.location}
 - sell type : ${newBook.selltype}
--Book's Condition : ${newBook.condition}`,
+- Book's Condition : ${newBook.condition}`,
       attachments: [
         {
-          path: path.join(__dirname, "..", newBook.image),
-          filename: path.basename(newBook.image),
+          path: imageUrl,
+          filename: path.basename(imageUrl),
         },
       ],
     };
