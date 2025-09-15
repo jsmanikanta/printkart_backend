@@ -173,7 +173,6 @@ export const getBooksSoldById = async (req, res) => {
         id: book._id,
         name: book.name,
         image: book.image || null,
-        file: order.file || null,
         price: book.price,
         condition: book.condition,
         description: book.description,
