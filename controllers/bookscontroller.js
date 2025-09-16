@@ -149,7 +149,7 @@ const getBookById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Sellbooks.find()
+    const books = await sellbook.find()
       .sort({ _id: -1 })
       .populate("user", "fullname email mobileNumber");
 
