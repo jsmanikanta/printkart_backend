@@ -123,7 +123,12 @@ export const getPrintsById = async (req, res) => {
         name: order.name,
         email: order.email,
         mobile: order.mobile,
-        file: order.file || null,
+        file: order.file
+          ? `${process.env.BASE_URL}/uploads/${order.file.replace(
+              /^uploads[\\/]/,
+              ""
+            )}`
+          : null,
         color: order.color,
         sides: order.sides,
         binding: order.binding,
@@ -154,14 +159,15 @@ export const getBooksSoldById = async (req, res) => {
     const user = await User.findById(userId).select(
       "fullname mobileNumber email"
     );
-
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const books = await Sellbooks.find({ user: userId }).select(
-      "name image price condition description location categeory selltype status updatedPrice"
-    );
+    const books = await Sellbooks.find({ user: userId })
+      .select(
+        "name image price condition description location categeory selltype status updatedPrice"
+      )
+      .sort({ orderDate: -1 });
 
     res.status(200).json({
       user: {
@@ -172,7 +178,12 @@ export const getBooksSoldById = async (req, res) => {
       books: books.map((book) => ({
         id: book._id,
         name: book.name,
-        image: book.image || null,
+        image: book.image
+          ? `${process.env.BASE_URL}/uploads/${book.image.replace(
+              /^uploads[\\/]/,
+              ""
+            )}`
+          : null,
         price: book.price,
         condition: book.condition,
         description: book.description,

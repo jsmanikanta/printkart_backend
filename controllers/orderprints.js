@@ -6,23 +6,18 @@ const User = require("../models/user");
 const Prints = require("../models/prints");
 
 // Multer setup for file uploads
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "Print_Orders",
-    allowed_formats: ["pdf"],
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, "..", "uploads");
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath);
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
-
 const upload = multer({ storage });
 
 // Nodemailer transporter configuration
@@ -63,15 +58,14 @@ const orderPrint = async (req, res) => {
     if (!color || !sides || !address || !transctionid) {
       return res.status(400).json({ message: "Required fields missing" });
     }
-
     if (!req.file) {
       return res.status(400).json({ message: "File is required" });
     }
 
-    const imageUrl = req.file.path; // Cloudinary URL
+    const savedFilePath = path.join("uploads", req.file.filename);
 
     const newOrder = new Prints({
-      file: imageUrl,
+      file: savedFilePath,
       name,
       email,
       mobile,
@@ -98,8 +92,10 @@ const orderPrint = async (req, res) => {
       subject: "New Print Order Placed",
       text: `
 New print order placed by ${user.fullname}.
+
 Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
+
 Details:
 - Name: ${newOrder.name}
 - Email: ${newOrder.email}
@@ -115,11 +111,11 @@ Details:
       }
 - Description: ${newOrder.description || "N/A"}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
-`,
+      `,
       attachments: [
         {
-          path: imageUrl,
-          filename: path.basename(imageUrl),
+          path: path.join(__dirname, "..", newOrder.file),
+          filename: path.basename(newOrder.file),
         },
       ],
     };

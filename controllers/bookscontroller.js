@@ -2,29 +2,31 @@ const path = require("path");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
 const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const sellbook = require("../models/sellbooks");
 const User = require("../models/user");
 
-require("dotenv").config();
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "Books",
-    allowed_formats: ["jpg", "jpeg", "png"],
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, "..", "uploads");
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath);
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
-
 const upload = multer({ storage });
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 const Sellbook = async (req, res) => {
   console.log("Request body:", req.body);
@@ -53,14 +55,13 @@ const Sellbook = async (req, res) => {
     if (!categeory || typeof categeory !== "string" || categeory.trim() === "")
       return res.status(400).json({ message: "Required category missing" });
 
-    // Cloudinary automatically stores the file and provides the URL at req.file.path
     if (!req.file) return res.status(400).json({ message: "File is required" });
 
-    const imageUrl = req.file.path; // Direct Cloudinary URL
+    const savedFilePath = path.join("uploads", req.file.filename);
 
     const newBook = new sellbook({
       name,
-      image: imageUrl, // Store Cloudinary image URL here
+      image: savedFilePath,
       price,
       categeory,
       description,
@@ -77,6 +78,7 @@ const Sellbook = async (req, res) => {
       to: "printkart0001@gmail.com",
       subject: "New book is ready to sell",
       text: `New book sold by ${user.email}
+
 Book details:
 - Name: ${newBook.name}
 - Price: ${newBook.price}
@@ -84,11 +86,11 @@ Book details:
 - Description: ${newBook.description}
 - Location: ${newBook.location}
 - sell type : ${newBook.selltype}
-- Book's Condition : ${newBook.condition}`,
+-Book's Condition : ${newBook.condition}`,
       attachments: [
         {
-          path: imageUrl,
-          filename: path.basename(imageUrl),
+          path: path.join(__dirname, "..", newBook.image),
+          filename: path.basename(newBook.image),
         },
       ],
     };
@@ -119,12 +121,11 @@ const getBookById = async (req, res) => {
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
-
     return res.status(200).json({
       id: book._id,
       name: book.name,
       image: book.image,
-      price: book.updatedPrice,
+      price: book.price,
       categeory: book.categeory,
       selltype: book.selltype,
       condition: book.condition,
@@ -145,10 +146,10 @@ const getBookById = async (req, res) => {
   }
 };
 
+
 const getAllBooks = async (req, res) => {
   try {
-    const books = await sellbook
-      .find()
+    const books = await Sellbooks.find()
       .sort({ _id: -1 })
       .populate("user", "fullname email mobileNumber");
 
@@ -163,7 +164,7 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.categeory || "-",
+        category: book.categeory || "-", // (keep this key the same as your DB)
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
@@ -176,4 +177,4 @@ const getAllBooks = async (req, res) => {
   }
 };
 
-module.exports = { Sellbook, upload, getBookById, getAllBooks };
+module.exports = { Sellbook, upload, getBookById,getAllBooks };

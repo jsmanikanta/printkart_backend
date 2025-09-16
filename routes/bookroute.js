@@ -1,4 +1,5 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
@@ -9,7 +10,6 @@ const {
 } = require("../controllers/bookscontroller");
 
 const { verifyToken } = require("../verifyToken");
-
 router.post("/sellbook", verifyToken, upload.single("image"), Sellbook);
 router.get("/:id", getBookById);
 router.get("/", getAllBooks);

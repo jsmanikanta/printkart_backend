@@ -29,7 +29,7 @@ app.get("/", (req, res) => {
 
 app.use("/user", userroute);
 app.use("/orders", orders);
-app.use('/books', books);
+app.use("/books", books);
 app.use("/admin", admin);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
