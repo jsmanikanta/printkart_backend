@@ -10,7 +10,6 @@ import express from "express";
 import path from "path";
 import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
-import { use } from "react";
 
 const app = express();
 
@@ -27,7 +26,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const Register = async (req, res) => {
-  const { fullname, mobileNumber, email, password,role } = req.body;
+  const { fullname, mobileNumber, email, password } = req.body;
   try {
     const number = await User.findOne({ mobileNumber });
     const mail = await User.findOne({ email });
@@ -42,9 +41,9 @@ export const Register = async (req, res) => {
       mobileNumber,
       email,
       password: hashedPassword,
-      role,
     });
     await newUser.save();
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: newUser.email,
@@ -61,11 +60,12 @@ export const Register = async (req, res) => {
       <p>Happy reading,<br/>The MyBookHub Team</p>
     `,
     };
+
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Failed to send email:", error);
       } else {
-        console.log("Registred email sent:", info.response);
+        console.log("Registered email sent:", info.response);
       }
     });
 
@@ -79,7 +79,7 @@ export const Register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { identifier, password, role } = req.body;
+  const { identifier, password } = req.body;
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
@@ -97,11 +97,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    // Verify password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ error: "Invalid username or password" });
     }
+
     const token = jwt.sign({ userId: user._id, role: user.role }, secretkey, {
       expiresIn: "3000s",
     });
@@ -112,6 +112,7 @@ export const login = async (req, res) => {
       user: {
         email: user.email,
         fullname: user.fullname,
+        mobileNumber: user.mobileNumber,
         role: user.role,
       },
     });
