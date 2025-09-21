@@ -141,6 +141,33 @@ Book details:
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+const updateSoldStatus = async (req, res) => {
+  try {
+    const userId = req.userId; // From verifyToken middleware
+    const { bookId } = req.params;
+    const { soldstatus } = req.body;
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!bookId || !soldstatus)
+      return res
+        .status(400)
+        .json({ message: "Book ID and Sold status required" });
+
+    // Find the book and verify ownership (optional but recommended)
+    const book = await sellbook.findById(bookId);
+    if (!book) return res.status(404).json({ message: "Book not found" });
+    if (book.user.toString() !== userId)
+      return res.status(403).json({ message: "Forbidden: Not your book" });
+
+    book.soldstatus = soldstatus;
+    await book.save();
+
+    res.status(200).json({ message: "Sold status updated", book });
+  } catch (error) {
+    console.error("Error updating sold status:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 const getBookById = async (req, res) => {
   const { id } = req.params;
@@ -254,7 +281,7 @@ const buyBook = async (req, res) => {
       category: sellBook.categeory,
       selltype: sellBook.selltype,
       quantity: 1,
-      bookSold: false,
+      bookSold: sellBook.soldstatus,
     });
 
     await newBuyBook.save();
@@ -268,4 +295,4 @@ const buyBook = async (req, res) => {
   }
 };
 
-module.exports = { Sellbook, upload, getBookById, getAllBooks, buyBook };
+module.exports = { Sellbook, upload, getBookById, getAllBooks, buyBook,updateSoldStatus };
