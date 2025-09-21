@@ -27,7 +27,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const Register = async (req, res) => {
-  const { fullname, mobileNumber, email, password } = req.body;
+  const { fullname, mobileNumber, email, password,role } = req.body;
   try {
     const number = await User.findOne({ mobileNumber });
     const mail = await User.findOne({ email });
@@ -42,6 +42,7 @@ export const Register = async (req, res) => {
       mobileNumber,
       email,
       password: hashedPassword,
+      role,
     });
     await newUser.save();
     const mailOptions = {
