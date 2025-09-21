@@ -81,7 +81,7 @@ const updateStatus = async (req, res) => {
 
     book.status = status;
     if (sellingPrice !== undefined) {
-      book.updatedPrice = sellingPrice; // Only update updatedPrice
+      book.updatedPrice = sellingPrice; 
     }
 
     await book.save();

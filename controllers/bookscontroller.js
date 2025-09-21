@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const multer = require("multer");
 
 const sellbook = require("../models/sellbooks");
+const Buybooks = require("../models/buybook");
 const User = require("../models/user");
 
 const storage = multer.diskStorage({
@@ -47,6 +48,7 @@ const Sellbook = async (req, res) => {
       location,
       selltype,
       condition,
+      soldstatus,
     } = req.body;
 
     if (!name || !price || !description || !location)
@@ -68,7 +70,8 @@ const Sellbook = async (req, res) => {
       location,
       selltype,
       condition,
-      user: userId, // Associate the user here
+      soldstatus,
+      user: userId,
     });
 
     await newBook.save();
@@ -103,6 +106,33 @@ Book details:
       }
     });
 
+    const mailtouser = {
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Thank You for Listing Your Book on MyBookHub!",
+      html: `
+      <h2>Hello ${user.fullname},</h2>
+      <p>Thank you for choosing <b>MyBookHub</b> to sell your book titled "<i>${newBook.name}</i>".</p>      
+      <p>We are happy to help you reach book buyers and supporters who appreciate the value you offer.</p>
+      <p>Your book details:</p>
+      <ul>
+        <li>Category: ${newBook.categeory}</li>
+        <li>Price: ₹${newBook.price}</li>
+        <li>Condition: ${newBook.condition}</li>
+        <li>Sell type: ${newBook.selltype}</li>
+      </ul>
+      <p>We will notify you when someone expresses interest or buys your book. In the meantime, you can log into your dashboard to manage your listings.</p>
+      <p>Thank you for being a part of MyBookHub community!</p>
+      <p>Warm regards,<br/>The MyBookHub Team</p>
+    `,
+    };
+    transporter.sendMail(mailtouser, (error, info) => {
+      if (error) {
+        console.error("Failed to send book notification email:", error);
+      } else {
+        console.log("Book notification email sent:", info.response);
+      }
+    });
     return res
       .status(201)
       .json({ message: "Book added successfully", Book: newBook });
@@ -126,6 +156,7 @@ const getBookById = async (req, res) => {
       name: book.name,
       image: book.image,
       price: book.price,
+      updatedPrice: book.updatedPrice,
       categeory: book.categeory,
       selltype: book.selltype,
       condition: book.condition,
@@ -146,10 +177,10 @@ const getBookById = async (req, res) => {
   }
 };
 
-
 const getAllBooks = async (req, res) => {
   try {
-    const books = await sellbook.find()
+    const books = await sellbook
+      .find()
       .sort({ _id: -1 })
       .populate("user", "fullname email mobileNumber");
 
@@ -164,7 +195,7 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.categeory || "-", // (keep this key the same as your DB)
+        category: book.categeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
@@ -177,4 +208,64 @@ const getAllBooks = async (req, res) => {
   }
 };
 
-module.exports = { Sellbook, upload, getBookById,getAllBooks };
+const buyBook = async (req, res) => {
+  const { bookId, userId } = req.body;
+
+  try {
+    const sellBook = await sellbook.findById(bookId);
+    const user = await User.findById(userId);
+
+    if (!sellBook) {
+      return res.status(404).json({ error: "Sellbook not found" });
+    }
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (
+      sellBook.status !== "Accepted" ||
+      sellBook.soldstatus === "Soldout" ||
+      sellBook.soldstatus === "Orderd"
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Book is not available for purchase" });
+    }
+
+    let existingBuyBook = await Buybooks.findOne({
+      bookName: sellBook.name,
+    });
+
+    if (existingBuyBook) {
+      existingBuyBook.quantity = (existingBuyBook.quantity || 1) + 1;
+      await existingBuyBook.save();
+      return res
+        .status(200)
+        .json({ message: "Book quantity updated", buyBook: existingBuyBook });
+    }
+
+    const newBuyBook = new Buybooks({
+      user: user._id,
+      book: sellBook._id,
+      bookName: sellBook.name,
+      image: sellBook.image,
+      updatedPrice: sellBook.updatedPrice ?? sellBook.price,
+      status: sellBook.status,
+      category: sellBook.categeory,
+      selltype: sellBook.selltype,
+      quantity: 1,
+      bookSold: false,
+    });
+
+    await newBuyBook.save();
+
+    return res
+      .status(201)
+      .json({ message: "Book added to buybooks", buyBook: newBuyBook });
+  } catch (error) {
+    console.error("Error buying book:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+module.exports = { Sellbook, upload, getBookById, getAllBooks, buyBook };

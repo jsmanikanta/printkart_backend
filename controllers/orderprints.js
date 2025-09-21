@@ -128,6 +128,37 @@ Details:
       }
     });
 
+    const mailtouser = {
+      from: '"MyBookHub" <your-email@gmail.com>',
+      to: newOrder.email,
+      subject: "Your Print Order Confirmation at MyBookHub",
+      html: `
+      <h2>Hello ${user.fullname},</h2>
+      <p>Thank you for placing a print order with <b>MyBookHub</b>.</p>      
+      <p>Here are the details of your print order:</p>
+      <ul>
+        <li>Name on order: ${newOrder.name}</li>
+        <li>Mobile number: ${newOrder.mobile}</li>
+        <li>Color: ${newOrder.color}</li>
+        <li>Sides: ${newOrder.sides}</li>
+        <li>Binding type: ${newOrder.binding}</li>
+        <li>Number of copies: ${newOrder.copies}</li>
+        <li>Order date: ${newOrder.orderDate.toDateString()}</li>
+      </ul>
+      <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
+      <p>Thank you for choosing MyBookHub for your printing needs!</p>
+      <p>Best regards,<br/>The MyBookHub Team</p>
+    `,
+    };
+
+    transporter.sendMail(mailtouser, function (error, info) {
+      if (error) {
+        console.error("Error sending print order email:", error);
+      } else {
+        console.log("Print order confirmation email sent:", info.response);
+      }
+    });
+
     res
       .status(201)
       .json({ message: "Order placed successfully", order: newOrder });

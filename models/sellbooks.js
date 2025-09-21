@@ -61,6 +61,11 @@ const sellbooksschema = new mongoose.Schema({
   updatedPrice: {
     type: Number,
   },
+  soldstatus: {
+    type: String,
+    enum: ["Instock", "Soldout", "Orderd"],
+    default: "Instock",
+  },
 });
 
 const Sellbooks = mongoose.model("Sellbooks", sellbooksschema);

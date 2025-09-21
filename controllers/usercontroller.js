@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import express from "express";
 import path from "path";
+import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
 
 const app = express();
@@ -15,6 +16,14 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const secretkey = process.env.secretkey;
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
@@ -34,6 +43,29 @@ export const Register = async (req, res) => {
       password: hashedPassword,
     });
     await newUser.save();
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: newUser.email,
+      subject: "Welcome to MyBookHub!",
+      html: `
+      <h2>Hello ${newUser.fullname},</h2>
+      <p>Welcome to <b>MyBookHub</b>! We’re excited you joined our platform, built just for book lovers and learners.</p>
+      <ul>
+        <li>Buy or sell new and used books easily.</li>
+        <li>Order quick, affordable printouts anytime.</li>
+      </ul>
+      <p>Your journey for seamless study materials and secondhand books starts here.</p>
+      <p>If you have any questions, reply to this email—we’re always happy to help!</p>
+      <p>Happy reading,<br/>The MyBookHub Team</p>
+    `,
+    };
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Failed to send email:", error);
+      } else {
+        console.log("Registred email sent:", info.response);
+      }
+    });
 
     res
       .status(201)
@@ -105,7 +137,6 @@ export const getPrintsById = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Fetch orders and sort by orderDate descending
     const orders = await Prints.find({ userid: userId })
       .select(
         "name email mobile file color sides binding copies address college year section description delivery transctionid orderDate"
