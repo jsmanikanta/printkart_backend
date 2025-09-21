@@ -77,7 +77,7 @@ export const Register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { identifier, password } = req.body;
+  const { identifier, password,role } = req.body;
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
