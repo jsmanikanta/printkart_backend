@@ -10,6 +10,7 @@ import express from "express";
 import path from "path";
 import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
+import { use } from "react";
 
 const app = express();
 
@@ -77,7 +78,7 @@ export const Register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { identifier, password,role } = req.body;
+  const { identifier, password, role } = req.body;
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
@@ -131,7 +132,7 @@ export const getPrintsById = async (req, res) => {
     }
 
     const user = await User.findById(userId).select(
-      "fullname mobileNumber email"
+      "fullname mobileNumber email role"
     );
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -148,6 +149,7 @@ export const getPrintsById = async (req, res) => {
         fullname: user.fullname,
         mobileNumber: user.mobileNumber,
         email: user.email,
+        role: user.role,
       },
       orders: orders.map((order) => ({
         id: order._id,
