@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
 const multer = require("multer");
+const verifyToken = require("../verifyToken");
 
 const sellbook = require("../models/sellbooks");
 const Buybooks = require("../models/buybook");
@@ -292,6 +293,82 @@ const buyBook = async (req, res) => {
   }
 };
 
+const bookOrdered = async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "User not logged in" });
+    }
+
+    const userId = req.userId;
+    const { bookId, action } = req.body; 
+    
+    if (!bookId) {
+      return res.status(400).json({ message: "Book ID is required" });
+    }
+
+    const book = await sellbook
+      .findById(bookId)
+      .populate("user", "fullname email mobileNumber");
+    if (!book) {
+      return res.status(404).json({ message: "Book not found" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (action === "decline") {
+      return res.status(200).json({ message: "Order declined" });
+    }
+
+    if (action === "confirm") {
+      const buyerMailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Order Confirmation - Your Book Order",
+        html: `
+          <h2>Thank you for your order!</h2>
+          <p>You have ordered the book: <strong>${book.name}</strong></p>
+          <p>Description: ${book.description}</p>
+          <p>Condition: ${book.condition}</p>
+          <p>Price: ₹${book.updatedPrice ?? book.price}</p>
+          <br/>
+          <p>We will contact you shortly.</p>
+        `,
+      };
+
+      const sellerMailOptions = {
+        from: process.env.EMAIL_USER,
+        to: book.user.email,
+        subject: "Your book has been ordered!",
+        html: `
+          <h2>Your book has been ordered!</h2>
+          <p>Book: <strong>${book.name}</strong></p>
+          <p>Ordered by: ${user.fullname} (${user.email})</p>
+          <p>Contact Number: <a href="tel:${user.mobileNumber}">${user.mobileNumber}</a></p>
+          <p>You can contact the buyer via email or phone.</p>
+          <br/>
+          <p><a href="mailto:${user.email}"><button>Contact Buyer by Email</button></a></p>
+          <p><a href="tel:${user.mobileNumber}"><button>Call Buyer</button></a></p>
+        `,
+      };
+      
+      await transporter.sendMail(buyerMailOptions);
+      await transporter.sendMail(sellerMailOptions);
+
+      return res
+        .status(200)
+        .json({ message: "Order confirmed and emails sent" });
+    }
+
+    res.status(400).json({ message: "Invalid action" });
+  } catch (error) {
+    console.error("Error in bookOrdered:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   Sellbook,
   upload,
@@ -299,4 +376,5 @@ module.exports = {
   getAllBooks,
   buyBook,
   updateSoldStatus,
+  bookOrdered,
 };
