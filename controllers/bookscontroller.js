@@ -300,8 +300,8 @@ const bookOrdered = async (req, res) => {
     }
 
     const userId = req.userId;
-    const { bookId, action } = req.body; 
-    
+    const { bookId, action } = req.body;
+
     if (!bookId) {
       return res.status(400).json({ message: "Book ID is required" });
     }
@@ -312,19 +312,19 @@ const bookOrdered = async (req, res) => {
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
-
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Handle decline action
     if (action === "decline") {
       return res.status(200).json({ message: "Order declined" });
     }
 
     if (action === "confirm") {
       const buyerMailOptions = {
-        from: process.env.EMAIL_USER,
+        from: process.env.EMAILUSER,
         to: user.email,
         subject: "Order Confirmation - Your Book Order",
         html: `
@@ -334,12 +334,10 @@ const bookOrdered = async (req, res) => {
           <p>Condition: ${book.condition}</p>
           <p>Price: ₹${book.updatedPrice ?? book.price}</p>
           <br/>
-          <p>We will contact you shortly.</p>
-        `,
+          <p>We will contact you shortly.</p>`,
       };
-
       const sellerMailOptions = {
-        from: process.env.EMAIL_USER,
+        from: process.env.EMAILUSER,
         to: book.user.email,
         subject: "Your book has been ordered!",
         html: `
@@ -350,10 +348,8 @@ const bookOrdered = async (req, res) => {
           <p>You can contact the buyer via email or phone.</p>
           <br/>
           <p><a href="mailto:${user.email}"><button>Contact Buyer by Email</button></a></p>
-          <p><a href="tel:${user.mobileNumber}"><button>Call Buyer</button></a></p>
-        `,
+          <p><a href="tel:${user.mobileNumber}"><button>Call Buyer</button></a></p>`,
       };
-      
       await transporter.sendMail(buyerMailOptions);
       await transporter.sendMail(sellerMailOptions);
 
@@ -361,11 +357,10 @@ const bookOrdered = async (req, res) => {
         .status(200)
         .json({ message: "Order confirmed and emails sent" });
     }
-
-    res.status(400).json({ message: "Invalid action" });
+    return res.status(400).json({ message: "Invalid action" });
   } catch (error) {
     console.error("Error in bookOrdered:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
