@@ -51,7 +51,7 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.categeory || "-", // (keep this key the same as your DB)
+        category: book.categeory || "-", 
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",

@@ -5,7 +5,6 @@ const multer = require("multer");
 const verifyToken = require("../verifyToken");
 
 const sellbook = require("../models/sellbooks");
-const Buybooks = require("../models/buybook");
 const User = require("../models/user");
 
 const storage = multer.diskStorage({
@@ -237,61 +236,6 @@ const getAllBooks = async (req, res) => {
   }
 };
 
-const buyBook = async (req, res) => {
-  const { bookId, userId } = req.body;
-
-  try {
-    const sellBook = await sellbook.findById(bookId);
-    const user = await User.findById(userId);
-
-    if (!sellBook) {
-      return res.status(404).json({ error: "Sellbook not found" });
-    }
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    if (sellBook.status !== "Accepted") {
-      return res
-        .status(400)
-        .json({ error: "Book is not available for purchase" });
-    }
-
-    let existingBuyBook = await Buybooks.findOne({
-      bookName: sellBook.name,
-    });
-
-    if (existingBuyBook) {
-      existingBuyBook.quantity = (existingBuyBook.quantity || 1) + 1;
-      await existingBuyBook.save();
-      return res
-        .status(200)
-        .json({ message: "Book quantity updated", buyBook: existingBuyBook });
-    }
-
-    const newBuyBook = new Buybooks({
-      user: user._id,
-      book: sellBook._id,
-      bookName: sellBook.name,
-      image: sellBook.image,
-      updatedPrice: sellBook.updatedPrice ?? sellBook.price,
-      status: sellBook.status,
-      category: sellBook.categeory,
-      selltype: sellBook.selltype,
-      quantity: 1,
-      bookSold: sellBook.soldstatus,
-    });
-
-    await newBuyBook.save();
-
-    return res
-      .status(201)
-      .json({ message: "Book added to buybooks", buyBook: newBuyBook });
-  } catch (error) {
-    console.error("Error buying book:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
 
 const bookOrdered = async (req, res) => {
   try {
@@ -317,7 +261,6 @@ const bookOrdered = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Handle decline action
     if (action === "decline") {
       return res.status(200).json({ message: "Order declined" });
     }
@@ -369,7 +312,6 @@ module.exports = {
   upload,
   getBookById,
   getAllBooks,
-  buyBook,
   updateSoldStatus,
   bookOrdered,
 };
