@@ -235,3 +235,29 @@ export const getBooksSoldById = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+import OrderedBooks from "../models/orderedbooks.js";
+
+export const getUserBoughtBooks = async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "User not logged in" });
+    }
+    const userId = req.userId;
+
+    // Find all ordered books where user is buyer
+    const orders = await OrderedBooks.find({ buyerid: userId })
+      .populate("bookid", "name description price updatedPrice condition")
+      .sort({ createdAt: -1 });
+    const boughtBooks = orders.map((order) => ({
+      orderId: order._id,
+      book: order.bookid,
+      review: order.review || "",
+    }));
+
+    return res.status(200).json({ boughtBooks });
+  } catch (error) {
+    console.error("Error in getUserBoughtBooks:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

@@ -51,19 +51,18 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.categeory || "-", 
+        category: book.categeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
-        userMobile: book.user?.mobileNumber || "-"
-      }))
+        userMobile: book.user?.mobileNumber || "-",
+      })),
     });
   } catch (error) {
     console.error("Error fetching books:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 const updateStatus = async (req, res) => {
   const { bookId } = req.params;
@@ -81,7 +80,7 @@ const updateStatus = async (req, res) => {
 
     book.status = status;
     if (sellingPrice !== undefined) {
-      book.updatedPrice = sellingPrice; 
+      book.updatedPrice = sellingPrice;
     }
 
     await book.save();
@@ -94,4 +93,32 @@ const updateStatus = async (req, res) => {
   }
 };
 
-module.exports = { getAllOrders, getAllBooks, updateStatus };
+const OrderedBooks = require("../models/orderedbooks");
+const User = require("../models/user");
+
+const getAllOrderedBooks = async (req, res) => {
+  try {
+    const orderedBooks = await OrderedBooks.find()
+      .populate("buyerid", "fullname email mobileNumber")
+      .populate("bookid", "name description price updatedPrice condition");
+
+    const formattedOrders = orderedBooks.map((order) => ({
+      orderId: order._id,
+      buyer: order.buyerid,
+      book: order.bookid,
+      review: order.review || "",
+    }));
+
+    res.status(200).json({ orderedBooks: formattedOrders });
+  } catch (error) {
+    console.error("Error in getAllOrderedBooks:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+module.exports = {
+  getAllOrders,
+  getAllBooks,
+  updateStatus,
+  getAllOrderedBooks,
+};

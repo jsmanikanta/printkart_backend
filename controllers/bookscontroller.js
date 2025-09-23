@@ -194,7 +194,7 @@ const getBookById = async (req, res) => {
       description: book.description,
       location: book.location,
       status: book.status,
-      soldstatus: book.soldstatus, // include here
+      soldstatus: book.soldstatus,
       user: book.user
         ? {
             id: book.user._id,
@@ -241,6 +241,8 @@ const getAllBooks = async (req, res) => {
   }
 };
 
+const OrderedBooks = require("../models/orderedbooks");
+
 const bookOrdered = async (req, res) => {
   try {
     if (!req.userId) {
@@ -257,9 +259,11 @@ const bookOrdered = async (req, res) => {
     const book = await sellbook
       .findById(bookId)
       .populate("user", "fullname email mobileNumber");
+
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -283,6 +287,7 @@ const bookOrdered = async (req, res) => {
           <br/>
           <p>We will contact you shortly.</p>`,
       };
+
       const sellerMailOptions = {
         from: process.env.EMAILUSER,
         to: book.user.email,
@@ -297,13 +302,23 @@ const bookOrdered = async (req, res) => {
           <p><a href="mailto:${user.email}"><button>Contact Buyer by Email</button></a></p>
           <p><a href="tel:${user.mobileNumber}"><button>Call Buyer</button></a></p>`,
       };
+
       await transporter.sendMail(buyerMailOptions);
       await transporter.sendMail(sellerMailOptions);
 
+      const orderedBook = new OrderedBooks({
+        buyerid: userId,
+        bookid: bookId,
+        review: "",
+      });
+
+      await orderedBook.save();
+
       return res
         .status(200)
-        .json({ message: "Order confirmed and emails sent" });
+        .json({ message: "Order confirmed and emails sent", book });
     }
+
     return res.status(400).json({ message: "Invalid action" });
   } catch (error) {
     console.error("Error in bookOrdered:", error);
