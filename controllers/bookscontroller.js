@@ -143,7 +143,7 @@ Book details:
 };
 const updateSoldStatus = async (req, res) => {
   try {
-    const userId = req.userId; // from verifyToken middleware
+    const userId = req.userId;
     const bookId = req.params.bookId;
     const { soldstatus } = req.body;
 
@@ -160,7 +160,10 @@ const updateSoldStatus = async (req, res) => {
     const book = await sellbook.findById(bookId);
     if (!book) return res.status(404).json({ message: "Book not found" });
 
-    if (book.user.toString() !== userId) {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (book.user.toString() !== userId && user.role !== "admin") {
       return res.status(403).json({ message: "Forbidden: Not your book" });
     }
 
