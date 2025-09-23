@@ -143,30 +143,29 @@ Book details:
 };
 const updateSoldStatus = async (req, res) => {
   try {
-    const userId = req.userId;
-    const { bookId } = req.params;
+    const bookId = req.params.bookId;
     const { soldstatus } = req.body;
 
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    if (!bookId || !soldstatus)
-      return res
-        .status(400)
-        .json({ message: "Book ID and Sold status required" });
+    if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
+      return res.status(400).json({ error: "Invalid soldstatus" });
+    }
 
     const book = await sellbook.findById(bookId);
-    if (!book) return res.status(404).json({ message: "Book not found" });
-    if (book.user.toString() !== userId)
-      return res.status(403).json({ message: "Forbidden: Not your book" });
+    
+    if (!book) {
+      return res.status(404).json({ error: "Book not found" });
+    }
 
     book.soldstatus = soldstatus;
     await book.save();
 
-    res.status(200).json({ message: "Sold status updated", book });
+    return res.status(200).json({ message: "Sold status updated", book });
   } catch (error) {
     console.error("Error updating sold status:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 const getBookById = async (req, res) => {
   const { id } = req.params;
