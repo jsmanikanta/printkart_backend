@@ -200,7 +200,7 @@ export const getBooksSoldById = async (req, res) => {
 
     const books = await Sellbooks.find({ user: userId })
       .select(
-        "name image price condition description location categeory selltype status updatedPrice"
+        "name image price condition description location categeory selltype status updatedPrice soldstatus"
       )
       .sort({ orderDate: -1 });
 
@@ -225,6 +225,7 @@ export const getBooksSoldById = async (req, res) => {
         location: book.location,
         category: book.categeory,
         sellType: book.selltype,
+        soldstatus: book.soldstatus,
         status: book.status,
         updatedPrice: book.updatedPrice || null,
       })),

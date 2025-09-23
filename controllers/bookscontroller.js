@@ -143,17 +143,25 @@ Book details:
 };
 const updateSoldStatus = async (req, res) => {
   try {
+    const userId = req.userId; // from verifyToken middleware
     const bookId = req.params.bookId;
     const { soldstatus } = req.body;
 
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!bookId || !soldstatus)
+      return res
+        .status(400)
+        .json({ message: "Book ID and soldstatus required" });
+
     if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
-      return res.status(400).json({ error: "Invalid soldstatus" });
+      return res.status(400).json({ message: "Invalid soldstatus" });
     }
 
     const book = await sellbook.findById(bookId);
-    
-    if (!book) {
-      return res.status(404).json({ error: "Book not found" });
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
+    if (book.user.toString() !== userId) {
+      return res.status(403).json({ message: "Forbidden: Not your book" });
     }
 
     book.soldstatus = soldstatus;
@@ -165,7 +173,6 @@ const updateSoldStatus = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 const getBookById = async (req, res) => {
   const { id } = req.params;
@@ -234,7 +241,6 @@ const getAllBooks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 const bookOrdered = async (req, res) => {
   try {
