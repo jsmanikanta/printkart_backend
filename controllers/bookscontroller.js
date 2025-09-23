@@ -163,10 +163,6 @@ const updateSoldStatus = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (book.user.toString() !== userId && user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden: Not your book" });
-    }
-
     book.soldstatus = soldstatus;
     await book.save();
 
