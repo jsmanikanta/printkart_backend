@@ -94,24 +94,35 @@ const updateStatus = async (req, res) => {
 };
 
 const OrderedBooks = require("../models/orderedbooks");
-const User = require("../models/user");
 
 const getAllOrderedBooks = async (req, res) => {
   try {
     const orderedBooks = await OrderedBooks.find()
-      .populate("buyerid", "fullname email mobileNumber")
-      .populate("bookid", "name description price updatedPrice condition");
+      .populate({
+        path: "buyerid",
+        select: "fullname email mobileNumber",
+      })
+      .populate({
+        path: "bookid",
+        select: "name description price updatedPrice condition user",
+        populate: {
+          path: "user",
+          select: "fullname email mobileNumber",
+        },
+      })
+      .sort({ createdAt: -1 }); // order by most recent
 
     const formattedOrders = orderedBooks.map((order) => ({
       orderId: order._id,
       buyer: order.buyerid,
       book: order.bookid,
+      seller: order.bookid.user,
       review: order.review || "",
     }));
 
     res.status(200).json({ orderedBooks: formattedOrders });
   } catch (error) {
-    console.error("Error in getAllOrderedBooks:", error);
+    console.error("Error in getAllOrderedBooksDetailed:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

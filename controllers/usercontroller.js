@@ -244,8 +244,6 @@ export const getUserBoughtBooks = async (req, res) => {
       return res.status(401).json({ message: "User not logged in" });
     }
     const userId = req.userId;
-
-    // Find all ordered books where user is buyer
     const orders = await OrderedBooks.find({ buyerid: userId })
       .populate("bookid", "name description price updatedPrice condition")
       .sort({ createdAt: -1 });
