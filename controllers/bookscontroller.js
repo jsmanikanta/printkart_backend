@@ -302,9 +302,26 @@ const bookOrdered = async (req, res) => {
           <p><a href="mailto:${user.email}"><button>Contact Buyer by Email</button></a></p>
           <p><a href="tel:${user.mobileNumber}"><button>Call Buyer</button></a></p>`,
       };
+      const Adminmail = {
+        from: process.env.EMAILUSER,
+        to: "printkart0001@gmail.com",
+        subject: "Book Ordered alert",
+        html: `
+          <h2>A Book has been ordered!</h2>
+          <p>Book: <strong>${book.name}</strong></p>
+          <P>Book seller: <strong>${book.user.name}</strong/>
+          <P>Book seller email: <strong>${book.user.email}</strong/>
+          <p>Ordered by: ${user.fullname}</p> 
+          <p>Buyer mail: ${user.email}</p>
+          <p> Buyer Contact Number: <a href="tel:${user.mobileNumber}">${user.mobileNumber}</a></p>
+          <p> Seller Contact Number: <a href="tel:${book.mobileNumber}">${book.mobileNumber}</a></p>
+          <br/>
+        `,
+      };
 
       await transporter.sendMail(buyerMailOptions);
       await transporter.sendMail(sellerMailOptions);
+      await transporter.sendMail(Adminmail);
 
       const orderedBook = new OrderedBooks({
         buyerid: userId,
