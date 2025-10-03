@@ -10,9 +10,6 @@ const orderSchema = new mongoose.Schema({
     ref: "Sellbooks",
     required: true,
   },
-  review: {
-    type: String,
-  },
 });
 
 const OrderedBooks=mongoose.model("orderedbooks",orderSchema);
