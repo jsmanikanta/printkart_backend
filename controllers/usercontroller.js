@@ -247,8 +247,8 @@ export const getUserBoughtBooks = async (req, res) => {
     const orders = await OrderedBooks.find({ buyerid: userId })
       .populate({
         path: "bookid",
-        select: "name description price updatedPrice condition image seller",
-        populate: { path: "seller", select: "fullname" },
+        select: "name description price updatedPrice condition image user",
+        populate: { path: "user", select: "fullname" }, // populate seller info from 'user' field
       })
       .sort({ createdAt: -1 });
 
@@ -256,9 +256,10 @@ export const getUserBoughtBooks = async (req, res) => {
       orderId: order._id,
       book: {
         ...order.bookid._doc,
-        sellerName: order.bookid.seller?.fullname || "Unknown Seller",
+        sellerName: order.bookid.user?.fullname || "Unknown Seller",
         image: order.bookid.image || null,
       },
+      review: order.review || "",
     }));
 
     return res.status(200).json({ boughtBooks });
