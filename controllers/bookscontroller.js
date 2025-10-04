@@ -1,25 +1,16 @@
 const path = require("path");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
-const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
 const verifyToken = require("../verifyToken");
+const express = require("express");
+const fileUpload = require("express-fileupload");
+const app = express();
 
-const sellbook = require("../models/sellbooks");
-const User = require("../models/user");
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "..", "uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath);
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload());
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -29,17 +20,29 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const Sellbook = async (req, res) => {
-  console.log("Request body:", req.body);
-  console.log("Request file:", req.file);
+const User = require("../models/user");
+const sellbook = require("../models/sellbooks");
 
+// Cloudinary config already present
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
+
+const Sellbook = async (req, res) => {
   try {
+    console.log("req.userId:", req.userId);
+    console.log("req.body:", req.body);
+    console.log("req.files:", req.files);
+
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Destructure fields from form-data
     const {
       name,
       price,
@@ -51,19 +54,36 @@ const Sellbook = async (req, res) => {
       soldstatus,
     } = req.body;
 
-    if (!name || !price || !description || !location)
+    // Validate required fields
+    if (!name || !price || !description || !location) {
       return res.status(400).json({ message: "Required fields missing" });
-
-    if (!categeory || typeof categeory !== "string" || categeory.trim() === "")
+    }
+    if (!categeory || typeof categeory !== "string" || !categeory.trim()) {
       return res.status(400).json({ message: "Required category missing" });
+    }
 
-    if (!req.file) return res.status(400).json({ message: "File is required" });
+    // Validate file presence
+    const imageFile = req.files && req.files.image;
+    if (!imageFile || !imageFile.data) {
+      return res.status(400).json({ message: "File is required" });
+    }
 
-    const savedFilePath = path.join("uploads", req.file.filename);
+    // Upload image buffer to Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "sellbooks",
+          resource_type: "image",
+        },
+        (error, result) => (error ? reject(error) : resolve(result))
+      );
+      streamifier.createReadStream(imageFile.data).pipe(stream);
+    });
 
+    // Create new book entry
     const newBook = new sellbook({
       name,
-      image: savedFilePath,
+      image: uploadResult.secure_url,
       price,
       categeory,
       description,
@@ -76,6 +96,7 @@ const Sellbook = async (req, res) => {
 
     await newBook.save();
 
+    // Email options for admin notification
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
@@ -88,14 +109,8 @@ Book details:
 - Category: ${newBook.categeory}
 - Description: ${newBook.description}
 - Location: ${newBook.location}
-- sell type : ${newBook.selltype}
--Book's Condition : ${newBook.condition}`,
-      attachments: [
-        {
-          path: path.join(__dirname, "..", newBook.image),
-          filename: path.basename(newBook.image),
-        },
-      ],
+- Sell type: ${newBook.selltype}
+- Book's Condition: ${newBook.condition}`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -106,33 +121,36 @@ Book details:
       }
     });
 
-    const mailtouser = {
+    // Email options for user notification
+    const mailToUser = {
       from: process.env.EMAIL_USER,
       to: user.email,
       subject: "Thank You for Listing Your Book on MyBookHub!",
       html: `
-      <h2>Hello ${user.fullname},</h2>
-      <p>Thank you for choosing <b>MyBookHub</b> to sell your book titled "<i>${newBook.name}</i>".</p>      
-      <p>We are happy to help you reach book buyers and supporters who appreciate the value you offer.</p>
-      <p>Your book details:</p>
-      <ul>
-        <li>Category: ${newBook.categeory}</li>
-        <li>Price: ₹${newBook.price}</li>
-        <li>Condition: ${newBook.condition}</li>
-        <li>Sell type: ${newBook.selltype}</li>
-      </ul>
-      <p>We will notify you when someone expresses interest or buys your book. In the meantime, you can log into your dashboard to manage your listings.</p>
-      <p>Thank you for being a part of MyBookHub community!</p>
-      <p>Warm regards,<br/>The MyBookHub Team</p>
-    `,
+        <h2>Hello ${user.fullname},</h2>
+        <p>Thank you for choosing <b>MyBookHub</b> to sell your book titled "<i>${newBook.name}</i>".</p>
+        <p>We are happy to help you reach book buyers and supporters who appreciate the value you offer.</p>
+        <p>Your book details:</p>
+        <ul>
+          <li>Category: ${newBook.categeory}</li>
+          <li>Price: ₹${newBook.price}</li>
+          <li>Condition: ${newBook.condition}</li>
+          <li>Sell type: ${newBook.selltype}</li>
+        </ul>
+        <p>We will notify you when someone expresses interest or buys your book. In the meantime, you can log into your dashboard to manage your listings.</p>
+        <p>Thank you for being a part of MyBookHub community!</p>
+        <p>Warm regards,<br/>The MyBookHub Team</p>
+      `,
     };
-    transporter.sendMail(mailtouser, (error, info) => {
+
+    transporter.sendMail(mailToUser, (error, info) => {
       if (error) {
-        console.error("Failed to send book notification email:", error);
+        console.error("Failed to send user notification email:", error);
       } else {
-        console.log("Book notification email sent:", info.response);
+        console.log("User notification email sent:", info.response);
       }
     });
+
     return res
       .status(201)
       .json({ message: "Book added successfully", Book: newBook });
@@ -141,6 +159,7 @@ Book details:
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 const updateSoldStatus = async (req, res) => {
   try {
     const userId = req.userId;
@@ -345,7 +364,6 @@ const bookOrdered = async (req, res) => {
 
 module.exports = {
   Sellbook,
-  upload,
   getBookById,
   getAllBooks,
   updateSoldStatus,

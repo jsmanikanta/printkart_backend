@@ -1,26 +1,11 @@
 const path = require("path");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
-const multer = require("multer");
 const User = require("../models/user");
 const Prints = require("../models/prints");
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
 
-// Multer setup for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "..", "uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath);
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({ storage });
-
-// Nodemailer transporter configuration
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -29,8 +14,23 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Place an order and send admin an email
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
+
+cloudinary.api.resources(
+  { type: "upload", prefix: "my_book_hub/" }, // your folder path
+  function (error, result) {
+    if (error) console.error("API error:", error);
+    else console.log("Uploaded files:", result.resources);
+  }
+);
+
 const orderPrint = async (req, res) => {
+  console.log("Cloudinary cloud_name:", process.env.CLOUD_NAME);
+
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -62,7 +62,17 @@ const orderPrint = async (req, res) => {
       return res.status(400).json({ message: "File is required" });
     }
 
-    const savedFilePath = path.join("uploads", req.file.filename);
+    // Upload file buffer to Cloudinary
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: "print_orders", resource_type: "auto" },
+        (error, result) => (error ? reject(error) : resolve(result))
+      );
+      streamifier.createReadStream(req.file.buffer).pipe(stream);
+    });
+
+    // Use Cloudinary URL as file path
+    const savedFilePath = uploadResult.secure_url;
 
     const newOrder = new Prints({
       file: savedFilePath,
@@ -86,6 +96,7 @@ const orderPrint = async (req, res) => {
 
     await newOrder.save();
 
+    // Send email to admin
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
@@ -114,8 +125,8 @@ Details:
       `,
       attachments: [
         {
-          path: path.join(__dirname, "..", newOrder.file),
-          filename: path.basename(newOrder.file),
+          filename: path.basename(savedFilePath),
+          path: savedFilePath,
         },
       ],
     };
@@ -128,27 +139,28 @@ Details:
       }
     });
 
+    // Send order confirmation to user
     const mailtouser = {
-      from: '"MyBookHub" <your-email@gmail.com>',
+      from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
       to: newOrder.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
-      <h2>Hello ${user.fullname},</h2>
-      <p>Thank you for placing a print order with <b>MyBookHub</b>.</p>      
-      <p>Here are the details of your print order:</p>
-      <ul>
-        <li>Name on order: ${newOrder.name}</li>
-        <li>Mobile number: ${newOrder.mobile}</li>
-        <li>Color: ${newOrder.color}</li>
-        <li>Sides: ${newOrder.sides}</li>
-        <li>Binding type: ${newOrder.binding}</li>
-        <li>Number of copies: ${newOrder.copies}</li>
-        <li>Order date: ${newOrder.orderDate.toDateString()}</li>
-      </ul>
-      <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
-      <p>Thank you for choosing MyBookHub for your printing needs!</p>
-      <p>Best regards,<br/>The MyBookHub Team</p>
-    `,
+        <h2>Hello ${user.fullname},</h2>
+        <p>Thank you for placing a print order with <b>MyBookHub</b>.</p>      
+        <p>Here are the details of your print order:</p>
+        <ul>
+          <li>Name on order: ${newOrder.name}</li>
+          <li>Mobile number: ${newOrder.mobile}</li>
+          <li>Color: ${newOrder.color}</li>
+          <li>Sides: ${newOrder.sides}</li>
+          <li>Binding type: ${newOrder.binding}</li>
+          <li>Number of copies: ${newOrder.copies}</li>
+          <li>Order date: ${newOrder.orderDate.toDateString()}</li>
+        </ul>
+        <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
+        <p>Thank you for choosing MyBookHub for your printing needs!</p>
+        <p>Best regards,<br/>The MyBookHub Team</p>
+      `,
     };
 
     transporter.sendMail(mailtouser, function (error, info) {
@@ -167,6 +179,8 @@ Details:
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+module.exports = { orderPrint };
 
 const getAllPrintOrders = async (req, res) => {
   try {
@@ -210,7 +224,7 @@ const getAllPrintOrders = async (req, res) => {
 };
 
 module.exports = {
-  upload,
+  cloudinary,
   orderPrint,
   getAllPrintOrders,
 };

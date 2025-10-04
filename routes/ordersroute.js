@@ -1,11 +1,10 @@
+const multer = require("multer");
 const express = require("express");
+const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
-const nodemailer = require("nodemailer");
-const path = require("path");
-
-const { upload, orderPrint } = require("../controllers/orderprints");
 const { verifyToken } = require("../verifyToken");
-// Route for order print: verify token and upload using memory storage
+const { orderPrint } = require("../controllers/orderprints");
 router.post("/orderprints", verifyToken, upload.single("file"), orderPrint);
 
 router.post("/sendOrderEmail", async (req, res) => {

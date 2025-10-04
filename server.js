@@ -3,10 +3,14 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+const fileUpload = require('express-fileupload');
 
 dotenv.config();
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload());
 
 mongoose
   .connect(process.env.database)
