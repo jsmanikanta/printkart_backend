@@ -121,7 +121,6 @@ Book details:
       }
     });
 
-    // Email options for user notification
     const mailToUser = {
       from: process.env.EMAIL_USER,
       to: user.email,
