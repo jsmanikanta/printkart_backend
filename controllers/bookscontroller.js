@@ -34,19 +34,22 @@ const Sellbook = async (req, res) => {
   try {
     console.log("req.userId:", req.userId);
     console.log("req.body:", req.body);
-    console.log("req.files:", req.files);
-
-    const userId = req.userId;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
+    console.log("req.file:", req.file);
+    const userId = req.userId; 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    // Destructure fields from form-data
+    if (!req.body) return res.status(400).json({ message: "No data received" });
+    if (!req.file)
+      return res.status(400).json({ message: "Image file is required" });
+
     const {
       name,
       price,
       categeory,
+      subcategeory,
       description,
       location,
       selltype,
@@ -54,49 +57,41 @@ const Sellbook = async (req, res) => {
       soldstatus,
     } = req.body;
 
-    // Validate required fields
-    if (!name || !price || !description || !location) {
+    if (!name || !price || !description || !location || !categeory) {
       return res.status(400).json({ message: "Required fields missing" });
     }
-    if (!categeory || typeof categeory !== "string" || !categeory.trim()) {
-      return res.status(400).json({ message: "Required category missing" });
-    }
 
-    // Validate file presence
-    const imageFile = req.files && req.files.image;
-    if (!imageFile || !imageFile.data) {
-      return res.status(400).json({ message: "File is required" });
+    const imageFile = req.file;
+    if (!imageFile) {
+      return res.status(400).json({ message: "Image file is required" });
     }
 
     // Upload image buffer to Cloudinary
     const uploadResult = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: "sellbooks",
-          resource_type: "image",
-        },
+        { folder: "sellbooks", resource_type: "image" },
         (error, result) => (error ? reject(error) : resolve(result))
       );
-      streamifier.createReadStream(imageFile.data).pipe(stream);
+      streamifier.createReadStream(req.file.buffer).pipe(stream);
     });
 
-    // Create new book entry
     const newBook = new sellbook({
       name,
       image: uploadResult.secure_url,
       price,
       categeory,
+      subcategeory,
       description,
       location,
       selltype,
       condition,
       soldstatus,
-      user: userId,
+      userid: userId,
     });
 
     await newBook.save();
 
-    // Email options for admin notification
+    // Email admin notification
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
@@ -107,6 +102,7 @@ Book details:
 - Name: ${newBook.name}
 - Price: ${newBook.price}
 - Category: ${newBook.categeory}
+- Subcategory: ${newBook.subcategeory}
 - Description: ${newBook.description}
 - Location: ${newBook.location}
 - Sell type: ${newBook.selltype}
@@ -121,6 +117,7 @@ Book details:
       }
     });
 
+    // Email user confirmation
     const mailToUser = {
       from: process.env.EMAIL_USER,
       to: user.email,
@@ -150,12 +147,10 @@ Book details:
       }
     });
 
-    return res
-      .status(201)
-      .json({ message: "Book added successfully", Book: newBook });
+    res.status(201).json({ message: "Book added successfully", Book: newBook });
   } catch (error) {
     console.error("Error adding book:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -207,6 +202,7 @@ const getBookById = async (req, res) => {
       price: book.price,
       updatedPrice: book.updatedPrice,
       categeory: book.categeory,
+      subcategeory: book.subcategeory,
       selltype: book.selltype,
       condition: book.condition,
       description: book.description,
@@ -247,6 +243,7 @@ const getAllBooks = async (req, res) => {
         description: book.description || "-",
         location: book.location || "-",
         category: book.categeory || "-",
+        subcategeory: book.subcategeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",

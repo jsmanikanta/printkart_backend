@@ -44,7 +44,7 @@ const sellbooksschema = new mongoose.Schema({
     type: String,
     "School Books": [
       "NCERT Books",
-      "State Board Books ",
+      "State Board Books",
       "CBSE Books",
       "Sample Papers & Workbook",
       "English Medium Textbooks",

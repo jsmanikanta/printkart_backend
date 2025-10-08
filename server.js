@@ -3,15 +3,16 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+const multer = require("multer");
 
 dotenv.config();
 
 const app = express();
 
-// CORS
+// Enable CORS
 app.use(cors());
 
-// Mongoose connection
+// Connect to database
 mongoose
   .connect(process.env.database)
   .then(() => console.log("Database connected successfully"))
@@ -23,21 +24,22 @@ const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
 
-// --- 1. File upload routes that use Multer (no JSON/urlencoded here!) ---
+// Multer middleware for uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Mount `/orders` route BEFORE JSON/urlencoded parsers for file uploads
 app.use("/orders", orders);
 
-// --- 2. Now apply body parsers for other routes ---
+// Mount body parsers AFTER file upload routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
-  res.send("Home page");
-});
-
+// Other routes
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
 
+// Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Start server
