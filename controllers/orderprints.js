@@ -24,8 +24,10 @@ const orderPrint = async (req, res) => {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
     const {
       name,
       mobile,
@@ -34,23 +36,19 @@ const orderPrint = async (req, res) => {
       sides,
       delivery,
       address,
-      collegeName,
-      yearOfStudy,
-      classSection,
+      rollno,
+      college,
+      year,
+      section,
       description,
       transctionid,
       binding,
       copies,
     } = req.body;
-    if (
-      !color ||
-      !sides ||
-      !address ||
-      !transctionid ||
-      !name ||
-      !mobile
-    )
+
+    if (!color || !sides || !address || !transctionid || !name || !mobile)
       return res.status(400).json({ message: "Required fields missing" });
+
     if (!req.file) return res.status(400).json({ message: "File is required" });
 
     const uploadResult = await new Promise((resolve, reject) => {
@@ -62,6 +60,7 @@ const orderPrint = async (req, res) => {
     });
 
     const savedFilePath = uploadResult.secure_url;
+
     const newOrder = new Prints({
       file: savedFilePath,
       name,
@@ -71,9 +70,10 @@ const orderPrint = async (req, res) => {
       sides,
       delivery: delivery || "Home",
       address,
-      college: collegeName || "",
-      year: yearOfStudy || "",
-      section: classSection || "",
+      rollno,
+      college: college || "",
+      year: year || "",
+      section: section || "",
       description,
       transctionid,
       userid: userId,
@@ -84,7 +84,7 @@ const orderPrint = async (req, res) => {
 
     await newOrder.save();
 
-    // Email admin
+    // Email Admin Notification
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -97,8 +97,7 @@ const orderPrint = async (req, res) => {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
       subject: "New Print Order Placed",
-      text: `
-New print order placed by ${user.fullname}.
+      text: `New print order placed by ${user.fullname}.
 Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
 Details:
@@ -108,56 +107,48 @@ Details:
 - Sides: ${newOrder.sides}
 - Binding: ${newOrder.binding}
 - Copies: ${newOrder.copies}
-- price shown: ${newOrder.price}
+- Price shown: ${newOrder.price}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
-- College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${
-        newOrder.section
-      }
+- College: ${newOrder.college}
+- Year: ${newOrder.year}
+- Section: ${newOrder.section}
 - Description: ${newOrder.description || "N/A"}
-- Order Date: ${newOrder.orderDate.toLocaleString()}
-      `,
+- Order Date: ${newOrder.orderDate.toLocaleString()}`,
       attachments: [
-        { filename: path.basename(savedFilePath), path: savedFilePath },
+        {
+          filename: path.basename(savedFilePath),
+          path: savedFilePath,
+        },
       ],
     };
 
     await transporter.sendMail(mailOptions);
 
-    // Email user confirmation
-    const mailtouser = {
+    // Email User Confirmation
+    const mailToUser = {
       from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
-        <h2>Hello ${user.fullname},</h2>
-        <p>Thank you for placing a print order with <b>MyBookHub</b>.</p>
-        <ul>
-          <li>Name on order: ${newOrder.name}</li>
-          <li>Mobile number: ${newOrder.mobile}</li>
-          <li>Color: ${newOrder.color}</li>
-          <li>Sides: ${newOrder.sides}</li>
-          <li>Binding type: ${newOrder.binding}</li>
-          <li>Number of copies: ${newOrder.copies}</li>
-          <li>Price of your order: ${newOrder.price}</li> 
-          <li>Order date: ${newOrder.orderDate.toDateString()}</li>
-        </ul>
+        <p>Thank you for placing a print order with <strong>MyBookHub</strong>.</p>
         <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
         <p>Thank you for choosing MyBookHub for your printing needs!</p>
         <p>Best regards,<br/>The MyBookHub Team</p>
       `,
     };
 
-    await transporter.sendMail(mailtouser);
+    await transporter.sendMail(mailToUser);
 
     res
       .status(201)
       .json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 const getAllPrintOrders = async (req, res) => {
   try {
     const orders = await Prints.find()
@@ -175,6 +166,7 @@ const getAllPrintOrders = async (req, res) => {
         sides: order.sides,
         delivery: order.delivery,
         address: order.address,
+        rollno: order.rollno,
         college: order.college,
         year: order.year,
         section: order.section,

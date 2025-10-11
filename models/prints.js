@@ -5,7 +5,7 @@ const printSchema = new mongoose.Schema({
   mobile: { type: String, required: true },
   file: { type: String, required: true },
   price: { type: Number, required: true },
-  color: { type: String, enum: ["b/w", "colour","both"], required: true },
+  color: { type: String, enum: ["b/w", "colour", "both"], required: true },
   sides: { type: String, enum: ["1", "2"], required: true },
   binding: {
     type: String,
@@ -17,11 +17,12 @@ const printSchema = new mongoose.Schema({
   college: { type: String },
   year: { type: String },
   section: { type: String },
+  rollno: { type: String },
   description: { type: String },
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
-  transctionid: { type: String, required: true },
+  transctionid: { type: String, required: true }, // Consider renaming to 'transactionId' for clarity
   orderDate: { type: Date, default: Date.now },
-  deliveryDate:{type: Date},
+  deliveryDate: { type: Date },
 });
 
 const Prints = mongoose.model("Prints", printSchema);
