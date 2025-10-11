@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
 const printSchema = new mongoose.Schema({
-  email: { type: String },
   name: { type: String, required: true },
   mobile: { type: String, required: true },
   file: { type: String, required: true },
-  color: { type: String, enum: ["b/w", "colour"], required: true },
+  price: { type: Number, required: true },
+  color: { type: String, enum: ["b/w", "colour","both"], required: true },
   sides: { type: String, enum: ["1", "2"], required: true },
   binding: {
     type: String,
@@ -21,6 +21,7 @@ const printSchema = new mongoose.Schema({
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
   transctionid: { type: String, required: true },
   orderDate: { type: Date, default: Date.now },
+  deliveryDate:{type: Date},
 });
 
 const Prints = mongoose.model("Prints", printSchema);

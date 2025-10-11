@@ -28,9 +28,9 @@ const orderPrint = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     const {
       name,
-      email,
       mobile,
       color,
+      price,
       sides,
       delivery,
       address,
@@ -48,13 +48,11 @@ const orderPrint = async (req, res) => {
       !address ||
       !transctionid ||
       !name ||
-      !email ||
       !mobile
     )
       return res.status(400).json({ message: "Required fields missing" });
     if (!req.file) return res.status(400).json({ message: "File is required" });
 
-    // Cloudinary upload
     const uploadResult = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: "print_orders", resource_type: "auto" },
@@ -67,9 +65,9 @@ const orderPrint = async (req, res) => {
     const newOrder = new Prints({
       file: savedFilePath,
       name,
-      email,
       mobile,
       color,
+      price,
       sides,
       delivery: delivery || "Home",
       address,
@@ -105,12 +103,12 @@ Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
 Details:
 - Name: ${newOrder.name}
-- Email: ${newOrder.email}
 - Mobile Number: ${newOrder.mobile}
 - Color: ${newOrder.color}
 - Sides: ${newOrder.sides}
 - Binding: ${newOrder.binding}
 - Copies: ${newOrder.copies}
+- price shown: ${newOrder.price}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
 - College, Year, Section: ${newOrder.college}, ${newOrder.year}, ${
@@ -129,7 +127,7 @@ Details:
     // Email user confirmation
     const mailtouser = {
       from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
-      to: newOrder.email,
+      to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
         <h2>Hello ${user.fullname},</h2>
@@ -141,6 +139,7 @@ Details:
           <li>Sides: ${newOrder.sides}</li>
           <li>Binding type: ${newOrder.binding}</li>
           <li>Number of copies: ${newOrder.copies}</li>
+          <li>Price of your order: ${newOrder.price}</li> 
           <li>Order date: ${newOrder.orderDate.toDateString()}</li>
         </ul>
         <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
@@ -168,8 +167,8 @@ const getAllPrintOrders = async (req, res) => {
     res.status(200).json({
       orders: orders.map((order) => ({
         name: order.name,
-        email: order.email,
         mobile: order.mobile,
+        price: order.price,
         id: order._id,
         file: order.file,
         color: order.color,
@@ -203,5 +202,5 @@ const getAllPrintOrders = async (req, res) => {
 module.exports = {
   cloudinary,
   getAllPrintOrders,
-  orderPrint
+  orderPrint,
 };
