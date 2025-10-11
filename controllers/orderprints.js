@@ -200,6 +200,7 @@ const getAllPrintOrders = async (req, res) => {
         color: order.color,
         sides: order.sides,
         delivery: order.delivery,
+        rollno: order.rollno,
         address: order.address,
         college: order.college,
         year: order.year,

@@ -24,7 +24,7 @@ const getAllOrders = async (req, res) => {
         section: order.section || "-",
         address: order.address || "-",
         description: order.description || "-",
-        transctionid: order.transctionid || "",
+        transctionid: order.transctionid || "-",
         orderDate: order.orderDate || null,
         status: order.status || "Pending",
       })),
