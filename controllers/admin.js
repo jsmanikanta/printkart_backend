@@ -11,13 +11,14 @@ const getAllOrders = async (req, res) => {
       orders: orders.map((order) => ({
         _id: order._id,
         fullName: order.userid?.fullname || order.name || "-",
-        email: order.userid?.email || order.email || "-",
         mobile: order.userid?.mobileNumber || order.mobile || "-",
         file: order.file,
         color: order.color,
         sides: order.sides,
+        price: order.price,
         binding: order.binding || "none",
         copies: order.copies,
+        rollno: order.rollno || "-",
         college: order.college || "-",
         year: order.year || "-",
         section: order.section || "-",
@@ -37,7 +38,7 @@ const getAllOrders = async (req, res) => {
 const getAllBooks = async (req, res) => {
   try {
     const books = await Sellbooks.find()
-      .sort({ _id: -1 })
+      .sort({ date_added: -1 })
       .populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
@@ -52,10 +53,12 @@ const getAllBooks = async (req, res) => {
         description: book.description || "-",
         location: book.location || "-",
         category: book.categeory || "-",
+        subcategeory: book.subcategeory,
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
         userMobile: book.user?.mobileNumber || "-",
+        date_added: book.date_added,
       })),
     });
   } catch (error) {
@@ -110,7 +113,7 @@ const getAllOrderedBooks = async (req, res) => {
           select: "fullname email mobileNumber",
         },
       })
-      .sort({ createdAt: -1 }); // order by most recent
+      .sort({ date_added: -1 });
 
     const formattedOrders = orderedBooks.map((order) => ({
       orderId: order._id,

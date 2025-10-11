@@ -145,6 +145,7 @@ const sellbooksschema = new mongoose.Schema({
     enum: ["Instock", "Soldout", "Orderd"],
     default: "Instock",
   },
+  date_added: { type: Date, default: Date.now },
 });
 
 const Sellbooks = mongoose.model("Sellbooks", sellbooksschema);
