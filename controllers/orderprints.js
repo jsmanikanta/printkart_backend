@@ -119,9 +119,11 @@ Details:
 - Price: ${newOrder.price}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
-- College, Year, Section, Registred Number: ${newOrder.college}, ${newOrder.year}, ${
-        newOrder.section}, ${newOrder.rollno}
+- College, Year, Section, Registred Number: ${newOrder.college}, ${
+        newOrder.year
+      }, ${newOrder.section}, ${newOrder.rollno}
 - Description: ${newOrder.description || "N/A"}
+- TransactionId: ${newOrder.transctionid}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
       `,
       attachments: [

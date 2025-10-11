@@ -10,23 +10,23 @@ const getAllOrders = async (req, res) => {
     res.status(200).json({
       orders: orders.map((order) => ({
         _id: order._id,
-        fullName: order.name || "-", // required field "name"
-        mobile: order.mobile || "-", // required field "mobile"
-        file: order.file || "-", // required field "file"
-        color: order.color || "-", // required field "color"
-        sides: order.sides || "-", // required field "sides"
-        price: order.price !== undefined ? order.price : "-", // required "price"
-        binding: order.binding || "none", // optional with default
-        copies: order.copies !== undefined ? order.copies : 1, // required with default 1
-        rollno: order.rollno || "-", // optional
-        college: order.college || "-", // optional
-        year: order.year || "-", // optional
-        section: order.section || "-", // optional
-        address: order.address || "-", // optional
-        description: order.description || "-", // optional
-        transactionId: order.transctionid || "", // required per schema
-        orderDate: order.orderDate || null, // default Date.now in schema
-        status: order.status || "Pending", // not in schema but used, fallback "Pending"
+        fullName: order.name || "-", 
+        mobile: order.mobile || "-", 
+        file: order.file || "-", 
+        color: order.color || "-", 
+        sides: order.sides || "-", 
+        price: order.price !== undefined ? order.price : "-", 
+        binding: order.binding || "none", 
+        copies: order.copies !== undefined ? order.copies : 1,
+        rollno: order.rollno || "-",
+        college: order.college || "-", 
+        year: order.year || "-",
+        section: order.section || "-",
+        address: order.address || "-", 
+        description: order.description || "-",
+        transactionId: order.transctionid || "", 
+        orderDate: order.orderDate || null, 
+        status: order.status || "Pending", 
       })),
     });
   } catch (error) {
