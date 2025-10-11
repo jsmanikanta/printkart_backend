@@ -20,7 +20,7 @@ const printSchema = new mongoose.Schema({
   rollno: { type: String },
   description: { type: String },
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
-  transctionid: { type: String, required: true }, // Consider renaming to 'transactionId' for clarity
+  transctionid: { type: String, required: true }, 
   orderDate: { type: Date, default: Date.now },
   deliveryDate: { type: Date },
 });

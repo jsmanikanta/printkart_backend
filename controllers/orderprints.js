@@ -56,7 +56,7 @@ const orderPrint = async (req, res) => {
       copies,
     } = req.body;
 
-    if (!color || !sides || !address || !transctionid) {
+    if (!color || !sides || !transctionid) {
       return res.status(400).json({ message: "Required fields missing" });
     }
     if (!req.file) {
