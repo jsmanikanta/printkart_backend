@@ -76,24 +76,22 @@ const orderPrint = async (req, res) => {
     const savedFilePath = uploadResult.secure_url;
 
     const newOrder = new Prints({
-      file: savedFilePath,
       name,
       mobile,
+      file: savedFilePath,
+      price,
       color,
       sides,
-      delivery: delivery || "Home",
+      binding,
+      copies,
       address,
-      price,
+      college,
+      year,
+      section,
       rollno,
-      college: college,
-      year: year,
-      section: section,
       description,
       transctionid,
-      userid: userId,
-      orderDate: new Date(),
-      binding: binding || "none",
-      copies: copies || 1,
+      userid: userId, // include this since schema requires it
     });
 
     await newOrder.save();
@@ -119,9 +117,9 @@ Details:
 - Price: ${newOrder.price}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
-- College, Year, Section, Registred Number: ${newOrder.college}, ${
-        newOrder.year
-      }, ${newOrder.section}, ${newOrder.rollno}
+- Address: ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${
+        newOrder.rollno
+      }
 - Description: ${newOrder.description || "N/A"}
 - TransactionId: ${newOrder.transctionid}
 - Order Date: ${newOrder.orderDate.toLocaleString()}
@@ -145,7 +143,7 @@ Details:
     // Send order confirmation to user
     const mailtouser = {
       from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
-      to: newOrder.email,
+      to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
         <h2>Hello ${user.fullname},</h2>
@@ -210,7 +208,7 @@ const getAllPrintOrders = async (req, res) => {
         orderDate: order.orderDate,
         transctionid: order.transctionid,
         binding: order.binding || "none",
-        status: order.status || "Pending",
+        deliveryStatus: order.deliveryStatus,
         user: order.userid
           ? {
               id: order.userid._id,

@@ -134,7 +134,7 @@ export const getPrintsById = async (req, res) => {
     }
 
     const user = await User.findById(userId).select(
-      "fullname mobileNumber email role"
+      "fullname mobileNumber email"
     );
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -142,7 +142,7 @@ export const getPrintsById = async (req, res) => {
 
     const orders = await Prints.find({ userid: userId })
       .select(
-        "name email mobile file color sides binding copies address college year section description delivery transctionid orderDate"
+        "name mobile file price color sides binding copies address college year section rollno description transctionid orderDate deliveryStatus"
       )
       .sort({ orderDate: -1 });
 
@@ -156,7 +156,6 @@ export const getPrintsById = async (req, res) => {
       orders: orders.map((order) => ({
         id: order._id,
         name: order.name,
-        email: order.email,
         mobile: order.mobile,
         file: order.file
           ? `${process.env.BASE_URL}/uploads/${order.file.replace(
@@ -164,6 +163,7 @@ export const getPrintsById = async (req, res) => {
               ""
             )}`
           : null,
+        price: order.price,
         color: order.color,
         sides: order.sides,
         binding: order.binding,
@@ -172,10 +172,12 @@ export const getPrintsById = async (req, res) => {
         year: order.year,
         section: order.section,
         address: order.address,
+        rollno: order.rollno,
         description: order.description,
         transctionid: order.transctionid,
         delivery: order.delivery,
         orderDate: order.orderDate,
+        deliveryStatus: order.deliveryStatus,
       })),
     });
   } catch (error) {
