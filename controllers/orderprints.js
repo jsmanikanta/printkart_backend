@@ -43,9 +43,9 @@ const orderPrint = async (req, res) => {
       mobile,
       color,
       sides,
-      delivery,
       address,
-      price,
+      originalprice,
+      discountprice,
       rollno,
       college,
       year,
@@ -79,7 +79,8 @@ const orderPrint = async (req, res) => {
       name,
       mobile,
       file: savedFilePath,
-      price,
+      originalprice,
+      discountprice,
       color,
       sides,
       binding,
@@ -91,7 +92,7 @@ const orderPrint = async (req, res) => {
       rollno,
       description,
       transctionid,
-      userid: userId, // include this since schema requires it
+      userid: userId,
     });
 
     await newOrder.save();
@@ -114,7 +115,8 @@ Details:
 - Sides: ${newOrder.sides}
 - Binding: ${newOrder.binding}
 - Copies: ${newOrder.copies}
-- Price: ${newOrder.price}
+- Original Price: ${newOrder.originalprice}
+- Offer Price : ${newOrder.discountprice}
 - Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
 - Address: ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${
@@ -155,7 +157,8 @@ Details:
           <li>Sides: ${newOrder.sides}</li>
           <li>Binding type: ${newOrder.binding}</li>
           <li>Number of copies: ${newOrder.copies}</li>
-          <li>Price :${newOrder.price}</li>
+          <li>Orginal Price :${newOrder.originalprice}</li>
+          <li> Offer Price :${newOrder.discountprice}</li>
           <li>Order date: ${newOrder.orderDate.toDateString()}</li>
         </ul>
         <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
@@ -203,7 +206,8 @@ const getAllPrintOrders = async (req, res) => {
         college: order.college,
         year: order.year,
         section: order.section,
-        price: order.price,
+        originalprice: order.originalprice,
+        discountprice: order.discountprice,
         description: order.description,
         orderDate: order.orderDate,
         transctionid: order.transctionid,

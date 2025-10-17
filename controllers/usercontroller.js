@@ -142,7 +142,7 @@ export const getPrintsById = async (req, res) => {
 
     const orders = await Prints.find({ userid: userId })
       .select(
-        "name mobile file price color sides binding copies address college year section rollno description transctionid orderDate deliveryStatus"
+        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate deliveryStatus"
       )
       .sort({ orderDate: -1 });
 
@@ -163,7 +163,8 @@ export const getPrintsById = async (req, res) => {
               ""
             )}`
           : null,
-        price: order.price,
+        originalprice: order.originalprice,
+        discountprice: order.discountprice,
         color: order.color,
         sides: order.sides,
         binding: order.binding,

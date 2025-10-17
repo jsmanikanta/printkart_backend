@@ -4,7 +4,8 @@ const printSchema = new mongoose.Schema({
   name: { type: String, required: true },
   mobile: { type: String, required: true },
   file: { type: String, required: true },
-  price: { type: Number, required: true },
+  originalprice: { type: Number, required: true },
+  discountprice: { type: Number },
   color: { type: String, enum: ["b/w", "colour", "both"], required: true },
   sides: { type: String, enum: ["1", "2"], required: true },
   binding: {
@@ -20,7 +21,7 @@ const printSchema = new mongoose.Schema({
   rollno: { type: String },
   description: { type: String },
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
-  transctionid: { type: String, required: true }, 
+  transctionid: { type: String, required: true },
   orderDate: { type: Date, default: Date.now },
   deliveryStatus: { type: String },
 });
