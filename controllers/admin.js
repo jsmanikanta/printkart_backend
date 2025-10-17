@@ -15,7 +15,12 @@ const getAllOrders = async (req, res) => {
         file: order.file || "-",
         color: order.color || "-",
         sides: order.sides || "-",
-        price: order.price !== undefined ? order.price : "-",
+        originalprice:
+          order.originalprice !== undefined ? order.originalprice : "-",
+        discountprice:
+          order.discountprice !== undefined
+            ? order.discountprice
+            : order.originalprice,
         binding: order.binding || "none",
         copies: order.copies !== undefined ? order.copies : 1,
         rollno: order.rollno || "-",
