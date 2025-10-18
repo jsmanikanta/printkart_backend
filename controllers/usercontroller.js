@@ -157,12 +157,7 @@ export const getPrintsById = async (req, res) => {
         id: order._id,
         name: order.name,
         mobile: order.mobile,
-        file: order.file
-          ? `${process.env.BASE_URL}/uploads/${order.file.replace(
-              /^uploads[\\/]/,
-              ""
-            )}`
-          : null,
+        file: order.file || "-",
         originalprice: order.originalprice,
         discountprice: order.discountprice,
         color: order.color,
