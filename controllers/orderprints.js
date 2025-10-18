@@ -20,21 +20,12 @@ function uploadToCloudinary(buffer, folder) {
 }
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 10000,
+  service: 'gmail',
+  auth: { user: process.env.EMAILUSER, pass: process.env.EMAILPASS },
+  connectionTimeout: 20000, // 20 seconds
 });
 
-const mailer = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.PRINTS_EMAIL,
-    pass: process.env.PRINTS_PASS,
-  },
-});
+
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,

@@ -18,13 +18,11 @@ const __dirname = path.dirname(__filename);
 const secretkey = process.env.secretkey;
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  connectionTimeout: 10000,
+  service: 'gmail',
+  auth: { user: process.env.EMAILUSER, pass: process.env.EMAILPASS },
+  connectionTimeout: 20000, // 20 seconds
 });
+
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
