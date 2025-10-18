@@ -13,6 +13,13 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+const sendmail = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.PRINTS_EMAIL,
+    pass: process.env.PRINTS_PASS,
+  },
+});
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -143,7 +150,7 @@ Details:
 
     // Send order confirmation to user
     const mailtouser = {
-      from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
+      from: `"MyBookHub" <${process.env.PRINTS_EMAIL}>`,
       to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
@@ -166,7 +173,7 @@ Details:
       `,
     };
 
-    transporter.sendMail(mailtouser, function (error, info) {
+    sendmail.sendMail(mailtouser, function (error, info) {
       if (error) {
         console.error("Error sending print order email:", error);
       } else {

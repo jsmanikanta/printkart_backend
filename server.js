@@ -12,11 +12,6 @@ const app = express();
 // Enable CORS
 app.use(cors());
 
-// for deployment
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
-
 // Connect to database
 mongoose
   .connect(process.env.database)

@@ -25,6 +25,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const sendmail = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.PRINTS_EMAIL,
+    pass: process.env.PRINTS_PASS,
+  },
+});
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
   try {
@@ -45,7 +52,7 @@ export const Register = async (req, res) => {
     await newUser.save();
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.PRINTS_EMAIL,
       to: newUser.email,
       subject: "Welcome to MyBookHub!",
       html: `
@@ -61,7 +68,7 @@ export const Register = async (req, res) => {
     `,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
+    sendmail.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Failed to send email:", error);
       } else {
@@ -157,12 +164,7 @@ export const getPrintsById = async (req, res) => {
         id: order._id,
         name: order.name,
         mobile: order.mobile,
-        file: order.file
-          ? `${process.env.BASE_URL}/uploads/${order.file.replace(
-              /^uploads[\\/]/,
-              ""
-            )}`
-          : null,
+        file: order.file || "-",
         originalprice: order.originalprice,
         discountprice: order.discountprice,
         color: order.color,
