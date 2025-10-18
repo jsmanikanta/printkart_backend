@@ -6,6 +6,19 @@ const Prints = require("../models/prints");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 
+function uploadToCloudinary(buffer, folder) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'auto' }, 
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -140,14 +153,14 @@ Attached are the print file and transaction image.
       ],
     };
 
-    sendmail.sendMail(mailToAdmin, (error, info) => {
+    transporter.sendMail(mailToAdmin, (error, info) => {
       if (error) console.error("Admin email error:", error);
       else console.log("Admin mail sent:", info.response);
     });
 
     // Email options for user confirmation
     const mailToUser = {
-      from: `"MyBookHub" <${process.env.PRINTS_EMAIL}>`,
+      from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
@@ -180,7 +193,7 @@ Attached are the print file and transaction image.
       `,
     };
 
-    mailer.sendMail(mailToUser, (error, info) => {
+    transporter.sendMail(mailToUser, (error, info) => {
       if (error) console.error("User email error:", error);
       else console.log("User confirmation mail sent:", info.response);
     });

@@ -24,13 +24,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-const mailer = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.PRINTS_EMAIL,
-    pass: process.env.PRINTS_PASS,
-  },
-});
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
@@ -52,7 +45,7 @@ export const Register = async (req, res) => {
     await newUser.save();
 
     const mailOptions = {
-      from: process.env.PRINTS_EMAIL,
+      from: process.env.EMAIL_USER,
       to: newUser.email,
       subject: "Welcome to MyBookHub!",
       html: `
@@ -68,7 +61,7 @@ export const Register = async (req, res) => {
     `,
     };
 
-    mailer.sendMail(mailOptions, (error, info) => {
+    transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Failed to send email:", error);
       } else {
