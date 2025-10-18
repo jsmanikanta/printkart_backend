@@ -6,13 +6,13 @@ const { verifyToken } = require("../verifyToken");
 const { orderPrint } = require("../controllers/orderprints");
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.post('/orderprints',verifyToken,
+router.post(
+  "/orderprints",
+  verifyToken,
   upload.fields([
-    { name: 'file', maxCount: 1 },            
-    { name: 'transctionid', maxCount: 1 }     
+    { name: "file", maxCount: 1 },
+    { name: "transctionid", maxCount: 1 },
   ]),
-  orderPrint);
-
-
-
+  orderPrint
+);
 module.exports = router;
