@@ -9,7 +9,7 @@ const streamifier = require("streamifier");
 function uploadToCloudinary(buffer, folder) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: 'auto' }, 
+      { folder, resource_type: "auto" },
       (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -25,6 +25,7 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 10000,
 });
 
 const mailer = nodemailer.createTransport({
@@ -74,11 +75,9 @@ const orderPrint = async (req, res) => {
     } = req.body;
 
     if (!req.files?.file || !req.files?.transctionid)
-      return res
-        .status(400)
-        .json({
-          message: "Both print file and transaction image are required.",
-        });
+      return res.status(400).json({
+        message: "Both print file and transaction image are required.",
+      });
 
     // Upload files to Cloudinary
     const uploadedPrint = await uploadToCloudinary(
