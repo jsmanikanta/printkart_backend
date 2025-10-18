@@ -117,7 +117,6 @@ Details:
 - Copies: ${newOrder.copies}
 - Original Price: ${newOrder.originalprice}
 - Offer Price : ${newOrder.discountprice}
-- Delivery: ${newOrder.delivery}
 - Address: ${newOrder.address}
 - Address: ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${
         newOrder.rollno
@@ -158,7 +157,7 @@ Details:
           <li>Binding type: ${newOrder.binding}</li>
           <li>Number of copies: ${newOrder.copies}</li>
           <li>Orginal Price :${newOrder.originalprice}</li>
-          <li> Offer Price :${newOrder.discountprice}</li>
+          <li>Offer Price :${newOrder.discountprice}</li>
           <li>Order date: ${newOrder.orderDate.toDateString()}</li>
         </ul>
         <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
@@ -212,7 +211,6 @@ const getAllPrintOrders = async (req, res) => {
         orderDate: order.orderDate,
         transctionid: order.transctionid,
         binding: order.binding || "none",
-        deliveryStatus: order.deliveryStatus,
         user: order.userid
           ? {
               id: order.userid._id,

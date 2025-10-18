@@ -142,7 +142,7 @@ export const getPrintsById = async (req, res) => {
 
     const orders = await Prints.find({ userid: userId })
       .select(
-        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate deliveryStatus"
+        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate "
       )
       .sort({ orderDate: -1 });
 
@@ -178,7 +178,6 @@ export const getPrintsById = async (req, res) => {
         transctionid: order.transctionid,
         delivery: order.delivery,
         orderDate: order.orderDate,
-        deliveryStatus: order.deliveryStatus,
       })),
     });
   } catch (error) {
