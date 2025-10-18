@@ -13,13 +13,6 @@ cloudinary.config({
 });
 
 // Nodemailer transporters
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 const sendmail = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -107,7 +100,7 @@ const orderPrint = async (req, res) => {
 
     // Email options for admin notification
     const mailToAdmin = {
-      from: process.env.EMAIL_USER,
+      from: process.env.PRINTS_EMAILR,
       to: "printkart0001@gmail.com",
       subject: "New Print Order Placed",
       text: `
@@ -145,7 +138,7 @@ Attached are the print file and transaction image.
       ],
     };
 
-    transporter.sendMail(mailToAdmin, (error, info) => {
+    sendmail.sendMail(mailToAdmin, (error, info) => {
       if (error) console.error("Admin email error:", error);
       else console.log("Admin mail sent:", info.response);
     });
