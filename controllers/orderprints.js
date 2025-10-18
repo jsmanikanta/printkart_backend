@@ -1,11 +1,18 @@
 const path = require("path");
-const fs = require("fs");
 const nodemailer = require("nodemailer");
 const User = require("../models/user");
 const Prints = require("../models/prints");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 
+// Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
+
+// Nodemailer transporters
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -21,23 +28,19 @@ const sendmail = nodemailer.createTransport({
   },
 });
 
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+// Helper function: upload a buffer to Cloudinary folder
+function uploadToCloudinary(buffer, folder) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: "auto" },
+      (error, result) => (error ? reject(error) : resolve(result))
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
 
-cloudinary.api.resources(
-  { type: "upload", prefix: "my_book_hub/" },
-  function (error, result) {
-    if (error) console.error("API error:", error);
-    else console.log("Uploaded files:", result.resources);
-  }
-);
-
+// Controller: orderPrint (You must have multer memoryStorage uploading fields named 'file' and 'transctionid' for print and transaction image)
 const orderPrint = async (req, res) => {
-  console.log("Cloudinary cloud_name:", process.env.CLOUD_NAME);
-
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -58,34 +61,32 @@ const orderPrint = async (req, res) => {
       year,
       section,
       description,
-      transctionid,
       binding,
       copies,
     } = req.body;
 
-    if (!color || !sides || !transctionid) {
-      return res.status(400).json({ message: "Required fields missing" });
-    }
-    if (!req.file) {
-      return res.status(400).json({ message: "File is required" });
-    }
+    if (!req.files?.file || !req.files?.transctionid)
+      return res
+        .status(400)
+        .json({
+          message: "Both print file and transaction image are required.",
+        });
 
-    // Upload file buffer to Cloudinary
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: "print_orders", resource_type: "auto" },
-        (error, result) => (error ? reject(error) : resolve(result))
-      );
-      streamifier.createReadStream(req.file.buffer).pipe(stream);
-    });
+    // Upload files to Cloudinary
+    const uploadedPrint = await uploadToCloudinary(
+      req.files.file[0].buffer,
+      "PrintOrderFiles"
+    );
+    const uploadedTransaction = await uploadToCloudinary(
+      req.files.transctionid[0].buffer,
+      "Transactions"
+    );
 
-    // Use Cloudinary URL as file path
-    const savedFilePath = uploadResult.secure_url;
-
+    // Create new print order
     const newOrder = new Prints({
       name,
       mobile,
-      file: savedFilePath,
+      file: uploadedPrint.secure_url,
       originalprice,
       discountprice,
       color,
@@ -98,99 +99,105 @@ const orderPrint = async (req, res) => {
       section,
       rollno,
       description,
-      transctionid,
+      transctionid: uploadedTransaction.secure_url,
       userid: userId,
     });
 
     await newOrder.save();
 
-    // Send email to admin
-    const mailOptions = {
+    // Email options for admin notification
+    const mailToAdmin = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
       subject: "New Print Order Placed",
       text: `
 New print order placed by ${user.fullname}.
 
-Transaction ID: ${transctionid}
 Order ID: ${newOrder._id}
 
 Details:
-- Name: ${newOrder.name}
-- Mobile Number: ${newOrder.mobile}
-- Color: ${newOrder.color}
-- Sides: ${newOrder.sides}
-- Binding: ${newOrder.binding}
-- Copies: ${newOrder.copies}
-- Original Price: ${newOrder.originalprice}
-- Offer Price : ${newOrder.discountprice}
-- Address: ${newOrder.address}
-- Address: ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${
-        newOrder.rollno
-      }
-- Description: ${newOrder.description || "N/A"}
-- TransactionId: ${newOrder.transctionid}
-- Order Date: ${newOrder.orderDate.toLocaleString()}
+Name: ${newOrder.name}
+Mobile: ${newOrder.mobile}
+Color: ${newOrder.color}
+Sides: ${newOrder.sides}
+Binding: ${newOrder.binding}
+Copies: ${newOrder.copies}
+Original Price: ${newOrder.originalprice}
+Offer Price: ${newOrder.discountprice}
+Address: ${newOrder.address}
+College: ${newOrder.college}, Year: ${newOrder.year}, Section: ${
+        newOrder.section
+      }, Roll No: ${newOrder.rollno}
+Description: ${newOrder.description || "N/A"}
+Order Date: ${newOrder.orderDate ? newOrder.orderDate.toLocaleString() : ""}
+
+Attached are the print file and transaction image.
       `,
       attachments: [
         {
-          filename: path.basename(savedFilePath),
-          path: savedFilePath,
+          filename: path.basename(uploadedPrint.secure_url),
+          path: uploadedPrint.secure_url,
+        },
+        {
+          filename: path.basename(uploadedTransaction.secure_url),
+          path: uploadedTransaction.secure_url,
         },
       ],
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Failed to send order notification email:", error);
-      } else {
-        console.log("Order notification email sent:", info.response);
-      }
+    transporter.sendMail(mailToAdmin, (error, info) => {
+      if (error) console.error("Admin email error:", error);
+      else console.log("Admin mail sent:", info.response);
     });
 
-    // Send order confirmation to user
-    const mailtouser = {
+    // Email options for user confirmation
+    const mailToUser = {
       from: `"MyBookHub" <${process.env.PRINTS_EMAIL}>`,
       to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
         <h2>Hello ${user.fullname},</h2>
-        <p>Thank you for placing a print order with <b>MyBookHub</b>.</p>      
-        <p>Here are the details of your print order:</p>
+        <p>Thank you for placing a print order with <b>MyBookHub</b>.</p>
+        <p>Order details:</p>
         <ul>
           <li>Name on order: ${newOrder.name}</li>
           <li>Color: ${newOrder.color}</li>
           <li>Sides: ${newOrder.sides}</li>
           <li>Binding type: ${newOrder.binding}</li>
           <li>Number of copies: ${newOrder.copies}</li>
-          <li>Orginal Price :${newOrder.originalprice}</li>
-          <li>Offer Price :${newOrder.discountprice}</li>
-          <li>Order date: ${newOrder.orderDate.toDateString()}</li>
+          <li>Original Price: ${newOrder.originalprice}</li>
+          <li>Offer Price: ${newOrder.discountprice}</li>
+          <li>Address: ${newOrder.address} | College: ${
+        newOrder.college
+      } | Year: ${newOrder.year} | Section: ${newOrder.section} | Roll No: ${
+        newOrder.rollno
+      }</li>
+          <li>Description: ${newOrder.description || "N/A"}</li>
+          <li>Order date: ${
+            newOrder.orderDate ? newOrder.orderDate.toDateString() : ""
+          }</li>
         </ul>
-        <p>Your order is being processed and will be fulfilled shortly. If you have any questions, please reply to this email.</p>
-        <p>Thank you for choosing MyBookHub for your printing needs!</p>
-        <p>Best regards,<br/>The MyBookHub Team</p>
+        <p><strong>Transaction ID Screenshot:</strong> <a href="${
+          newOrder.transctionid
+        }" target="_blank">View Image</a></p>
+        <p>Your order is processing. If any questions, reply to this email.</p>
+        <p>Thanks for choosing MyBookHub!</p>
       `,
     };
 
-    sendmail.sendMail(mailtouser, function (error, info) {
-      if (error) {
-        console.error("Error sending print order email:", error);
-      } else {
-        console.log("Print order confirmation email sent:", info.response);
-      }
+    sendmail.sendMail(mailToUser, (error, info) => {
+      if (error) console.error("User email error:", error);
+      else console.log("User confirmation mail sent:", info.response);
     });
 
     res
       .status(201)
       .json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
-    console.error("Error placing order:", error);
+    console.error("Order error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-module.exports = { orderPrint };
 
 const getAllPrintOrders = async (req, res) => {
   try {
@@ -200,24 +207,24 @@ const getAllPrintOrders = async (req, res) => {
 
     res.status(200).json({
       orders: orders.map((order) => ({
+        id: order._id,
         name: order.name,
         mobile: order.mobile,
-        id: order._id,
         file: order.file,
         color: order.color,
         sides: order.sides,
-        delivery: order.delivery,
-        rollno: order.rollno,
+        binding: order.binding || "none",
+        copies: order.copies,
+        originalprice: order.originalprice,
+        discountprice: order.discountprice,
         address: order.address,
         college: order.college,
         year: order.year,
         section: order.section,
-        originalprice: order.originalprice,
-        discountprice: order.discountprice,
+        rollno: order.rollno,
         description: order.description,
-        orderDate: order.orderDate,
         transctionid: order.transctionid,
-        binding: order.binding || "none",
+        orderDate: order.orderDate,
         user: order.userid
           ? {
               id: order.userid._id,
@@ -229,13 +236,9 @@ const getAllPrintOrders = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("Error fetching orders:", error);
+    console.error("Fetching orders error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-module.exports = {
-  cloudinary,
-  orderPrint,
-  getAllPrintOrders,
-};
+module.exports = { orderPrint, getAllPrintOrders };
