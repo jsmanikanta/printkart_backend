@@ -13,9 +13,8 @@ const app = express();
 app.use(cors());
 
 // for deployment
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
+app.all('/{*splat}', (req, res) => res.send('Not Found'));
+
 
 // Connect to database
 mongoose
