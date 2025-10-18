@@ -1,38 +1,40 @@
 const path = require("path");
+const fs = require("fs");
 const nodemailer = require("nodemailer");
 const User = require("../models/user");
 const Prints = require("../models/prints");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 
-// Cloudinary config
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
-// Nodemailer transporters
-const sendmail = nodemailer.createTransport({
+const mailer = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.PRINTS_EMAIL,
     pass: process.env.PRINTS_PASS,
   },
 });
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
 
-// Helper function: upload a buffer to Cloudinary folder
-function uploadToCloudinary(buffer, folder) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: "auto" },
-      (error, result) => (error ? reject(error) : resolve(result))
-    );
-    streamifier.createReadStream(buffer).pipe(stream);
-  });
-}
+cloudinary.api.resources(
+  { type: "upload", prefix: "my_book_hub/" },
+  function (error, result) {
+    if (error) console.error("API error:", error);
+    else console.log("Uploaded files:", result.resources);
+  }
+);
 
-// Controller: orderPrint (You must have multer memoryStorage uploading fields named 'file' and 'transctionid' for print and transaction image)
 const orderPrint = async (req, res) => {
   try {
     const userId = req.userId;
@@ -100,7 +102,7 @@ const orderPrint = async (req, res) => {
 
     // Email options for admin notification
     const mailToAdmin = {
-      from: process.env.PRINTS_EMAILR,
+      from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
       subject: "New Print Order Placed",
       text: `
@@ -178,7 +180,7 @@ Attached are the print file and transaction image.
       `,
     };
 
-    sendmail.sendMail(mailToUser, (error, info) => {
+    mailer.sendMail(mailToUser, (error, info) => {
       if (error) console.error("User email error:", error);
       else console.log("User confirmation mail sent:", info.response);
     });
@@ -234,4 +236,8 @@ const getAllPrintOrders = async (req, res) => {
   }
 };
 
-module.exports = { orderPrint, getAllPrintOrders };
+module.exports = {
+  cloudinary,
+  orderPrint,
+  getAllPrintOrders,
+};

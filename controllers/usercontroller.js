@@ -24,14 +24,14 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
-const sendmail = nodemailer.createTransport({
+const mailer = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.PRINTS_EMAIL,
     pass: process.env.PRINTS_PASS,
   },
 });
+
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
   try {
@@ -68,7 +68,7 @@ export const Register = async (req, res) => {
     `,
     };
 
-    sendmail.sendMail(mailOptions, (error, info) => {
+    mailer.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Failed to send email:", error);
       } else {
@@ -164,7 +164,7 @@ export const getPrintsById = async (req, res) => {
         id: order._id,
         name: order.name,
         mobile: order.mobile,
-        file: order.file || "-",
+        file: order.file,
         originalprice: order.originalprice,
         discountprice: order.discountprice,
         color: order.color,
@@ -180,6 +180,7 @@ export const getPrintsById = async (req, res) => {
         transctionid: order.transctionid,
         delivery: order.delivery,
         orderDate: order.orderDate,
+        deliveryStatus: order.deliveryStatus,
       })),
     });
   } catch (error) {
