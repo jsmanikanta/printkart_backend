@@ -22,6 +22,7 @@ const printSchema = new mongoose.Schema({
   description: { type: String },
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
   transctionid: { type: String, required: true },
+  deliverystatus:{type: String}, 
   orderDate: { type: Date, default: Date.now },
 });
 
