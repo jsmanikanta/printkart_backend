@@ -31,7 +31,7 @@ const getAllOrders = async (req, res) => {
         description: order.description || "-",
         transctionid: order.transctionid || "-",
         orderDate: order.orderDate || null,
-        status: order.status || "Pending",
+        status: order.status || "ordered",
       })),
     });
   } catch (error) {
