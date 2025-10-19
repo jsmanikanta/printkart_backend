@@ -24,8 +24,8 @@ const printSchema = new mongoose.Schema({
   transctionid: { type: String, required: true },
   status: {
     type: String,
-    enum: ["Pending", "Accepted", "Rejected"],
-    default: "Pending",
+    enum: [" ordered","dispatched", "out for delivery", "delivered"],
+    default: "ordered",
   },
   orderDate: { type: Date, default: Date.now },
 });
