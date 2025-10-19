@@ -15,6 +15,6 @@ router.get("/printorders", getAllOrders);
 router.get("/books", getAllBooks);
 router.patch("/book/:bookId/status", updateStatus);
 router.get("/ordered-books",getAllOrderedBooks);
-router.patch('/prints/:orderId/status", printstatus) ;
+router.patch("/prints/:orderId/status", printstatus) ;
 
 module.exports = router;
