@@ -72,6 +72,29 @@ const getAllBooks = async (req, res) => {
   }
 };
 
+const printstatus = async (req, res) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+
+  try {
+    if (!["Accepted", "Rejected"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const print = await Prints.findById(orderId);
+    if (!print) {
+      return res.status(404).json({ error: "order not found" });
+    }
+    await book.save();
+    return res
+      .status(200)
+      .json({ message: `Book ${status} successfully`, book });
+  } catch (error) {
+    console.error("Error updating book status and selling price:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 const updateStatus = async (req, res) => {
   const { bookId } = req.params;
   const { status, sellingPrice } = req.body;
@@ -140,4 +163,5 @@ module.exports = {
   getAllBooks,
   updateStatus,
   getAllOrderedBooks,
+  printstatus, 
 };
