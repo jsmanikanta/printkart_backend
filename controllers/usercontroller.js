@@ -17,12 +17,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const secretkey = process.env.secretkey;
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.EMAILUSER, pass: process.env.EMAILPASS },
-  connectionTimeout: 20000, // 20 seconds
+const mailer = nodemailer.createTransport({
+  service:"gmail",
+  auth:{
+    user: process.env.PRINTS_MAIL,
+    pass: process.env.PRINTS_PASS,
+  }
 });
-
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
@@ -44,7 +45,7 @@ export const Register = async (req, res) => {
     await newUser.save();
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.PRINTS_EMAIL,
       to: newUser.email,
       subject: "Welcome to MyBookHub!",
       html: `
@@ -60,7 +61,7 @@ export const Register = async (req, res) => {
     `,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
+    mailer.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.error("Failed to send email:", error);
       } else {

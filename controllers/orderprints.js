@@ -5,6 +5,7 @@ const User = require("../models/user");
 const Prints = require("../models/prints");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const dotenv = require("dotenv");
 
 function uploadToCloudinary(buffer, folder) {
   return new Promise((resolve, reject) => {
@@ -20,12 +21,20 @@ function uploadToCloudinary(buffer, folder) {
 }
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.EMAILUSER, pass: process.env.EMAILPASS },
-  connectionTimeout: 20000, // 20 seconds
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
-
-
+const mailer = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.PRINTS_MAIL,
+    pass: process.env.PRINTS_PASS,
+  },
+});
+dotenv.config();
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
@@ -150,7 +159,7 @@ Attached are the print file and transaction image.
 
     // Email options for user confirmation
     const mailToUser = {
-      from: `"MyBookHub" <${process.env.EMAIL_USER}>`,
+      from: `"MyBookHub" <${process.env.PRINTS_EMAIL}>`,
       to: user.email,
       subject: "Your Print Order Confirmation at MyBookHub",
       html: `
@@ -183,7 +192,7 @@ Attached are the print file and transaction image.
       `,
     };
 
-    transporter.sendMail(mailToUser, (error, info) => {
+    mailer.sendMail(mailToUser, (error, info) => {
       if (error) console.error("User email error:", error);
       else console.log("User confirmation mail sent:", info.response);
     });
