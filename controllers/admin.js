@@ -77,7 +77,7 @@ const printstatus = async (req, res) => {
   const { status } = req.body;
 
   try {
-    if (!["Accepted", "Rejected"].includes(status)) {
+    if (!["dispatched", "out for delivery", "delivered"].includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
 
@@ -85,12 +85,13 @@ const printstatus = async (req, res) => {
     if (!print) {
       return res.status(404).json({ error: "order not found" });
     }
-    await book.save();
-    return res
-      .status(200)
-      .json({ message: `Book ${status} successfully`, book });
+
+    print.status = status; // You should update the status field here
+    await print.save();
+
+    return res.status(200).json({ message: `Print order ${status} successfully`, print });
   } catch (error) {
-    console.error("Error updating book status and selling price:", error);
+    console.error("Error updating print status:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
