@@ -205,51 +205,7 @@ Attached are the print file and transaction image.
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-const getAllPrintOrders = async (req, res) => {
-  try {
-    const orders = await Prints.find()
-      .sort({ orderDate: -1 })
-      .populate("userid", "fullname email mobileNumber");
-
-    res.status(200).json({
-      orders: orders.map((order) => ({
-        id: order._id,
-        name: order.name,
-        mobile: order.mobile,
-        file: order.file,
-        color: order.color,
-        sides: order.sides,
-        binding: order.binding || "none",
-        copies: order.copies,
-        originalprice: order.originalprice,
-        discountprice: order.discountprice,
-        address: order.address,
-        college: order.college,
-        year: order.year,
-        section: order.section,
-        rollno: order.rollno,
-        description: order.description,
-        transctionid: order.transctionid,
-        orderDate: order.orderDate,
-        user: order.userid
-          ? {
-              id: order.userid._id,
-              fullname: order.userid.fullname,
-              email: order.userid.email,
-              mobileNumber: order.userid.mobileNumber,
-            }
-          : null,
-      })),
-    });
-  } catch (error) {
-    console.error("Fetching orders error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
 module.exports = {
   cloudinary,
-  orderPrint,
-  getAllPrintOrders,
+  orderPrint, 
 };
