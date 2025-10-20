@@ -18,11 +18,11 @@ const __dirname = path.dirname(__filename);
 const secretkey = process.env.secretkey;
 
 const mailer = nodemailer.createTransport({
-  service:"gmail",
-  auth:{
+  service: "gmail",
+  auth: {
     user: process.env.PRINTS_MAIL,
     pass: process.env.PRINTS_PASS,
-  }
+  },
 });
 
 export const Register = async (req, res) => {
@@ -45,7 +45,7 @@ export const Register = async (req, res) => {
     await newUser.save();
 
     const mailOptions = {
-      from: process.env.PRINTS_EMAIL,
+      from: process.env.PRINTS_MAIL,
       to: newUser.email,
       subject: "Welcome to MyBookHub!",
       html: `
@@ -142,7 +142,7 @@ export const getPrintsById = async (req, res) => {
 
     const orders = await Prints.find({ userid: userId })
       .select(
-        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate "
+        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate status"
       )
       .sort({ orderDate: -1 });
 
@@ -173,7 +173,7 @@ export const getPrintsById = async (req, res) => {
         transctionid: order.transctionid,
         delivery: order.delivery,
         orderDate: order.orderDate,
-        deliveryStatus: order.deliveryStatus,
+        status: order.status,
       })),
     });
   } catch (error) {
