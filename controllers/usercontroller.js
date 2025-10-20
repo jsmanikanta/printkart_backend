@@ -2,31 +2,24 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import User from "../models/user.js";
-import Prints from "../models/prints.js";
-import Sellbooks from "../models/sellbooks.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import express from "express";
 import path from "path";
-import nodemailer from "nodemailer";
 import { fileURLToPath } from "url";
+import { Resend } from "resend";
 
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const secretkey = process.env.secretkey;
+const secretkey = process.env.SECRETKEY;
 
-const mailer = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.PRINTS_MAIL,
-    pass: process.env.PRINTS_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const Register = async (req, res) => {
   const { fullname, mobileNumber, email, password } = req.body;
+
   try {
     const number = await User.findOne({ mobileNumber });
     const mail = await User.findOne({ email });
@@ -44,36 +37,35 @@ export const Register = async (req, res) => {
     });
     await newUser.save();
 
-    const mailOptions = {
-      from: process.env.PRINTS_MAIL,
-      to: newUser.email,
-      subject: "Welcome to MyBookHub!",
-      html: `
-      <h2>Hello ${newUser.fullname},</h2>
-      <p>Welcome to <b>MyBookHub</b>! We’re excited you joined our platform, built just for book lovers and learners.</p>
-      <ul>
-        <li>Buy or sell new and used books easily.</li>
-        <li>Order quick, affordable printouts anytime.</li>
-      </ul>
-      <p>Your journey for seamless study materials and secondhand books starts here.</p>
-      <p>If you have any questions, reply to this email—we’re always happy to help!</p>
-      <p>Happy reading,<br/>The MyBookHub Team</p>
-    `,
-    };
+    try {
+      await resend.emails.send({
+        from: "MyBookHub <onboarding@resend.dev>",
+        to: newUser.email,
+        subject: `${newUser.fullname}! Welcome to MyBookHub 🎉`,
+        html: `
+          <h2>Hello ${newUser.fullname},</h2>
+          <p>Welcome to <b>MyBookHub</b>! We’re thrilled to have you on board.</p>
+          <ul>
+            <li>📚 Buy or sell books easily.</li>
+            <li>🖨️ Order quick, affordable printouts anytime.</li>
+          </ul>
+          <p>Your journey for seamless study materials and secondhand books starts here.</p>
+          <p>If you have any questions, reply to this email — we’re always happy to help!</p>
+          <p>Happy reading,<br/><b>The MyBookHub Team</b></p>
+        `,
+      });
 
-    mailer.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Failed to send email:", error);
-      } else {
-        console.log("Registered email sent:", info.response);
-      }
+      console.log("✅ Welcome email sent to:", newUser.email);
+    } catch (emailError) {
+      console.error("❌ Failed to send welcome email:", emailError);
+    }
+
+    res.status(201).json({
+      message: "User registered successfully!",
+      user: newUser,
     });
-
-    res
-      .status(201)
-      .json({ message: "User registered successfully!", user: newUser });
   } catch (error) {
-    console.error(error);
+    console.error("Register error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

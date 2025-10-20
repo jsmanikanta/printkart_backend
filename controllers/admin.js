@@ -1,8 +1,8 @@
 const Prints = require("../models/prints");
 const Sellbooks = require("../models/sellbooks");
+const OrderedBooks = require("../models/orderedbooks");
 
 const getAllOrders = async (req, res) => {
-  
   try {
     const orders = await Prints.find()
       .sort({ orderDate: -1 })
@@ -32,7 +32,8 @@ const getAllOrders = async (req, res) => {
         description: order.description || "-",
         transctionid: order.transctionid || "-",
         orderDate: order.orderDate || null,
-        status: order.status || "Pending",
+        status: order.status || "Order placed",
+        userid: order.userid || null,
       })),
     });
   } catch (error) {
@@ -40,45 +41,67 @@ const getAllOrders = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-// Update print order status and optionally the discount price
 const updatePrintStatus = async (req, res) => {
   const { orderId } = req.params;
   const { status, discountprice } = req.body;
 
+  const validStatuses = [
+    "Order placed",
+    "Verified",
+    "Ready to dispatch",
+    "Out for delivery",
+    "Delivered",
+  ];
+
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+
   try {
-    // Validate status
-    const validStatuses = [
-      "Order placed",
-      "Verified",
-      "Ready to dispatch",
-      "Out for delivery",
-      "Delivered",
-    ];
-
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status value" });
-    }
-
-    // Fetch order by ID
     const order = await Prints.findById(orderId);
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Update fields
     order.status = status;
     if (discountprice !== undefined) {
       order.discountprice = discountprice;
     }
+
     await order.save();
 
-    return res.status(200).json({
-      message: `Order status updated to '${status}' successfully`,
-      order,
-    });
+    return res
+      .status(200)
+      .json({ message: "Print order updated successfully", order });
   } catch (error) {
     console.error("Error updating print order status:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const updateStatus = async (req, res) => {
+  const { bookId } = req.params;
+  const { status, sellingPrice } = req.body;
+
+  if (!["Accepted", "Rejected"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+
+  try {
+    const book = await Sellbooks.findById(bookId);
+    if (!book) return res.status(404).json({ error: "Book not found" });
+
+    book.status = status;
+    if (sellingPrice !== undefined) {
+      book.updatedPrice = sellingPrice;
+    }
+
+    await book.save();
+    return res
+      .status(200)
+      .json({ message: `Book ${status} successfully`, book });
+  } catch (error) {
+    console.error("Error updating book status and selling price:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -114,37 +137,6 @@ const getAllBooks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-const updateStatus = async (req, res) => {
-  const { bookId } = req.params;
-  const { status, sellingPrice } = req.body;
-
-  try {
-    if (!["Accepted", "Rejected"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
-    }
-
-    const book = await Sellbooks.findById(bookId);
-    if (!book) {
-      return res.status(404).json({ error: "Book not found" });
-    }
-
-    book.status = status;
-    if (sellingPrice !== undefined) {
-      book.updatedPrice = sellingPrice;
-    }
-
-    await book.save();
-    return res
-      .status(200)
-      .json({ message: `Book ${status} successfully`, book });
-  } catch (error) {
-    console.error("Error updating book status and selling price:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const OrderedBooks = require("../models/orderedbooks");
 
 const getAllOrderedBooks = async (req, res) => {
   try {
