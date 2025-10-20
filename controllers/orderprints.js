@@ -5,7 +5,6 @@ import User from "../models/user.js";
 import Prints from "../models/prints.js";
 import cloudinary from "cloudinary";
 import streamifier from "streamifier";
-
 dotenv.config();
 
 // Configure Cloudinary
