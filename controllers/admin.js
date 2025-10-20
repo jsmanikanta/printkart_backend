@@ -1,4 +1,5 @@
 const Prints = require("../models/prints");
+const mongoose = require("mongoose");
 const Sellbooks = require("../models/sellbooks");
 const OrderedBooks = require("../models/orderedbooks");
 
@@ -53,8 +54,14 @@ const updatePrintStatus = async (req, res) => {
     "Delivered",
   ];
 
+  // Validate status
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: "Invalid status value" });
+  }
+
+  // Validate orderId format
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    return res.status(400).json({ error: "Invalid orderId format" });
   }
 
   try {
@@ -64,7 +71,7 @@ const updatePrintStatus = async (req, res) => {
     }
 
     order.status = status;
-    if (discountprice !== undefined) {
+    if (discountprice !== undefined && !isNaN(discountprice)) {
       order.discountprice = discountprice;
     }
 
