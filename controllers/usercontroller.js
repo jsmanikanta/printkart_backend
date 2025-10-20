@@ -120,11 +120,13 @@ export function setupUploadsStatic(app) {
 
 export const getPrintsById = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId; // Ensure a middleware is setting this, e.g., verifyToken
+
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
+    // Fetch user info
     const user = await User.findById(userId).select(
       "fullname mobileNumber email"
     );
@@ -132,13 +134,15 @@ export const getPrintsById = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Fetch the print orders for this user
     const orders = await Prints.find({ userid: userId })
       .select(
         "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate status"
       )
       .sort({ orderDate: -1 });
 
-    res.status(200).json({
+    // Format response
+    return res.status(200).json({
       user: {
         fullname: user.fullname,
         mobileNumber: user.mobileNumber,
@@ -168,7 +172,7 @@ export const getPrintsById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user data:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
