@@ -24,8 +24,8 @@ const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
 
-// Multer middleware for uploads
-const upload = multer({ storage: multer.memoryStorage() });
+app.use(express.json()); // for parsing JSON bodies
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Mount `/orders` route BEFORE JSON/urlencoded parsers for file uploads
 app.use("/orders", orders);
