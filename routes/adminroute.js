@@ -9,6 +9,8 @@ const {
   getAllOrderedBooks,
 } = require("../controllers/admin");
 
+router.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 router.get("/printorders", getAllOrders);
 router.get("/books", getAllBooks);
 router.patch("/book/:bookId/status", updateStatus);
