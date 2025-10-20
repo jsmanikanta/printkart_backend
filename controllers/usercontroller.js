@@ -151,7 +151,6 @@ export const getPrintsById = async (req, res) => {
         fullname: user.fullname,
         mobileNumber: user.mobileNumber,
         email: user.email,
-        role: user.role,
       },
       orders: orders.map((order) => ({
         id: order._id,
@@ -171,7 +170,6 @@ export const getPrintsById = async (req, res) => {
         rollno: order.rollno,
         description: order.description,
         transctionid: order.transctionid,
-        delivery: order.delivery,
         orderDate: order.orderDate,
         status: order.status,
       })),

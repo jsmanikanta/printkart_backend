@@ -22,6 +22,11 @@ const printSchema = new mongoose.Schema({
   description: { type: String },
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
   transctionid: { type: String, required: true },
+  status: {
+    type: String,
+    enum: [" ordered", "dispatched", "out for delivery", "delivered"],
+    default: "ordered",
+  },
   orderDate: { type: Date, default: Date.now },
   status: {
     type: String,

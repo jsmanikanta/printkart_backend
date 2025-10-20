@@ -65,7 +65,7 @@ const orderPrint = async (req, res) => {
       transctionid,
     } = req.body;
 
-    if (!color || !sides ) {
+    if (!color || !sides) {
       return res.status(400).json({ message: "Required fields missing" });
     }
 
