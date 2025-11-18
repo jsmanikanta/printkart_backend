@@ -31,6 +31,7 @@ const getAllOrders = async (req, res) => {
         section: order.section || "-",
         address: order.address || "-",
         description: order.description || "-",
+        payment: order.payment || "-",
         transctionid: order.transctionid || "-",
         orderDate: order.orderDate || null,
         status: order.status || "Order placed",
