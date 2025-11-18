@@ -59,7 +59,8 @@ export const orderPrint = async (req, res) => {
     if (!req.files?.file?.[0])
       return res.status(400).json({ message: "Print PDF file is required" });
 
-    
+    if (!payment)
+  return res.status(400).json({ message: "Payment method is required" });
 
     // Upload files to Cloudinary
     const uploadedPrint = await uploadToCloudinary(
