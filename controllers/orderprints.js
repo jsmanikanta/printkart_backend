@@ -59,8 +59,7 @@ export const orderPrint = async (req, res) => {
     if (!req.files?.file?.[0])
       return res.status(400).json({ message: "Print PDF file is required" });
 
-    if (!req.files?.transctionid?.[0])
-      return res.status(400).json({ message: "Transaction image is required" });
+    
 
     // Upload files to Cloudinary
     const uploadedPrint = await uploadToCloudinary(
