@@ -50,6 +50,7 @@ export const orderPrint = async (req, res) => {
       binding,
       copies,
       transctionid,
+      payment,
     } = req.body;
 
     if (!color || !sides)
@@ -88,6 +89,7 @@ export const orderPrint = async (req, res) => {
       section,
       rollno,
       description,
+      payment, 
       transctionid: uploadedTransaction.secure_url,
       userid: userId,
     });
@@ -119,6 +121,7 @@ export const orderPrint = async (req, res) => {
       }, ${newOrder.rollno}</li>
       <li><b>Description:</b> ${newOrder.description || "N/A"}</li>
     </ul>
+    <li><b>Mode of payment :</b> ${newOrder.payment}</li>
     <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
     <p>🧾 <a href="${
       uploadedPrint.secure_url
