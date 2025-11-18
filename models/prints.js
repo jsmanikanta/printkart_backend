@@ -21,7 +21,8 @@ const printSchema = new mongoose.Schema({
   rollno: { type: String },
   description: { type: String },
   userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
-  transctionid: { type: String, required: true },
+  transctionid: { type: String },
+  payment: {type: String required: true},
   status: {
     type: String,
     enum: [" ordered", "dispatched", "out for delivery", "delivered"],
