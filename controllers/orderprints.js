@@ -29,13 +29,15 @@ const uploadToCloudinary = async (buffer, folderName) => {
 
 export const orderPrint = async (req, res) => {
   try {
+    // Debug: log files to see what's arriving
+    console.log("DEBUG req.files:", Object.keys(req.files || {}));
+    // files will be like: { file: [File], transctionid: [File] } if multer configured correctly
+
     const userId = req.userId;
-    if (!userId)
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const user = await User.findById(userId);
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const {
       name,
@@ -52,11 +54,11 @@ export const orderPrint = async (req, res) => {
       description,
       binding,
       copies,
-      payment,        // payment method (UPI or COD)
-      transctionid    // Only text, screenshot handled separately
+      payment, // expected "UPI" or "payondelivery"
+      // NOTE: do NOT rely on req.body.transctionid for file URL
     } = req.body;
 
-    // Basic validations
+    // validations
     if (!color || !sides)
       return res.status(400).json({ message: "Required fields missing" });
 
@@ -66,32 +68,34 @@ export const orderPrint = async (req, res) => {
     if (!payment)
       return res.status(400).json({ message: "Payment method is required" });
 
-    // Upload print file to Cloudinary
-    const uploadedPrint = await uploadToCloudinary(
-      req.files.file[0].buffer,
-      "PrintOrders"
-    );
+    // SERVER-SIDE file size limits (10 MB)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const pdfFile = req.files.file[0];
+    if (pdfFile.size > MAX_SIZE)
+      return res.status(400).json({ message: "PDF file size must be less than 10MB" });
 
+    // Upload print file
+    const uploadedPrint = await uploadToCloudinary(pdfFile.buffer, "PrintOrders");
     if (!uploadedPrint?.secure_url)
       return res.status(500).json({ message: "Failed to upload print file" });
 
-    // Upload transaction screenshot (only for UPI payments)
+    // Process transaction screenshot (for UPI)
     let uploadedTransaction = null;
-
     if (payment === "UPI") {
-      if (!req.files?.transctionid?.[0])
-        return res.status(400).json({ message: "Transaction screenshot required" });
+      if (!req.files?.transctionid?.[0]) {
+        return res.status(400).json({ message: "Transaction screenshot required for UPI" });
+      }
+      const trxFile = req.files.transctionid[0];
+      if (trxFile.size > MAX_SIZE) {
+        return res.status(400).json({ message: "Transaction screenshot must be less than 10MB" });
+      }
 
-      uploadedTransaction = await uploadToCloudinary(
-        req.files.transctionid[0].buffer,
-        "Transactions"
-      );
-
+      uploadedTransaction = await uploadToCloudinary(trxFile.buffer, "Transactions");
       if (!uploadedTransaction?.secure_url)
         return res.status(500).json({ message: "Failed to upload transaction screenshot" });
     }
 
-    // Save order to DB
+    // Save order
     const newOrder = new Prints({
       name,
       mobile,
@@ -109,13 +113,14 @@ export const orderPrint = async (req, res) => {
       rollno,
       description,
       payment,
+      // store the uploaded image URL (empty string if not provided)
       transctionid: uploadedTransaction ? uploadedTransaction.secure_url : "",
       userid: userId,
     });
 
     await newOrder.save();
 
-    // Email to Admin
+    // Email to Admin (use uploadedTransaction URL, not req.body.transctionid)
     const adminEmailHtml = `
       <h2>New print order placed by ${user.fullname}</h2>
       <h3>Order Details:</h3>
@@ -132,7 +137,6 @@ export const orderPrint = async (req, res) => {
         <li><b>College Info:</b> ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${newOrder.rollno}</li>
         <li><b>Description:</b> ${newOrder.description || "N/A"}</li>
         <li><b>Payment Mode:</b> ${newOrder.payment}</li>
-        <li><b>Transaction ID (Text):</b> ${transctionid || "N/A"}</li>
       </ul>
       <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
       <p>📄 <a href="${uploadedPrint.secure_url}" target="_blank">View Print File</a></p>
@@ -150,10 +154,7 @@ export const orderPrint = async (req, res) => {
       html: adminEmailHtml,
     });
 
-    // Delay before sending user mail
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Email to User
+    // Email to user
     const userEmailHtml = `
       <h2>Hello ${user.fullname},</h2>
       <p>Thank you for placing a print order with <b>MyBookHub</b>!</p>
@@ -177,12 +178,8 @@ export const orderPrint = async (req, res) => {
       html: userEmailHtml,
     });
 
-    // Final Response
-    res.status(201).json({
-      message: "Order placed successfully",
-      order: newOrder
-    });
-
+    // Final response
+    res.status(201).json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
     res.status(500).json({ error: "Internal server error" });
