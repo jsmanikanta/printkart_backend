@@ -60,28 +60,31 @@ export const orderPrint = async (req, res) => {
       return res.status(400).json({ message: "Print PDF file is required" });
 
     if (!payment)
-  return res.status(400).json({ message: "Payment method is required" });
+      return res.status(400).json({ message: "Payment method is required" });
 
     // Upload files to Cloudinary
     const uploadedPrint = await uploadToCloudinary(
       req.files.file[0].buffer,
       "PrintOrders"
     );
+    if (!uploadedPrint || !uploadedPrint.secure_url) {
+      return res.status(500).json({ message: "Failed to upload print file" });
+    }
+
     let uploadedTransaction = null;
-
-if (payment === "UPI") {
-  // If paymentmethod is UPI, screenshot is required
-  if (!req.files?.transctionid?.[0]) {
-    return res.status(400).json({ message: "Transaction screenshot required" });
-  }
-
-  uploadedTransaction = await uploadToCloudinary(
-    req.files.transctionid[0].buffer,
-    "Transactions"
-  );
-} else {
-  uploadedTransaction = null;
-}
+    if (payment === "UPI") {
+      // If payment method is UPI, screenshot is required
+      if (!req.files?.transctionid?.[0]) {
+        return res.status(400).json({ message: "Transaction screenshot required" });
+      }
+      uploadedTransaction = await uploadToCloudinary(
+        req.files.transctionid[0].buffer,
+        "Transactions"
+      );
+      if (!uploadedTransaction || !uploadedTransaction.secure_url) {
+        return res.status(500).json({ message: "Failed to upload transaction screenshot" });
+      }
+    }
 
     // Save order
     const newOrder = new Prints({
@@ -100,81 +103,73 @@ if (payment === "UPI") {
       section,
       rollno,
       description,
-      payment, 
-      transctionid: uploadedTransaction.secure_url,
+      payment,
+      transctionid: uploadedTransaction ? uploadedTransaction.secure_url : "",
       userid: userId,
     });
 
     await newOrder.save();
 
-    // Send email to admin first
-    const adminEmail = await resend.emails.send({
+    // Send email to admin
+    const adminEmailHtml = `
+      <h2>New print order placed by ${user.fullname}</h2>
+      <p><b>Transaction ID:</b> ${transctionid}</p>
+      <p><b>Order ID:</b> ${newOrder._id}</p>
+      <h3>Order Details:</h3>
+      <ul>
+        <li><b>Name:</b> ${newOrder.name}</li>
+        <li><b>Mobile:</b> ${newOrder.mobile}</li>
+        <li><b>Color:</b> ${newOrder.color}</li>
+        <li><b>Sides:</b> ${newOrder.sides}</li>
+        <li><b>Binding:</b> ${newOrder.binding}</li>
+        <li><b>Copies:</b> ${newOrder.copies}</li>
+        <li><b>Original Price:</b> ${newOrder.originalprice}</li>
+        <li><b>Offer Price:</b> ${newOrder.discountprice}</li>
+        <li><b>Address:</b> ${newOrder.address}</li>
+        <li><b>College Info:</b> ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${newOrder.rollno}</li>
+        <li><b>Description:</b> ${newOrder.description || "N/A"}</li>
+        <li><b>Mode of payment :</b> ${newOrder.payment}</li>
+      </ul>
+      <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
+      <p>🧾 <a href="${uploadedPrint.secure_url}" target="_blank">View Print File</a></p>
+      ${uploadedTransaction && uploadedTransaction.secure_url
+        ? `<p>💳 <a href="${uploadedTransaction.secure_url}" target="_blank">View Transaction</a></p>`
+        : ""}
+    `;
+    await resend.emails.send({
       from: "MyBookHub Admin <onboarding@resend.dev>",
       to: "printkart0001@gmail.com",
       subject: "🖨️ New Print Order Placed - MyBookHub",
-      html: `
-    <h2>New print order placed by ${user.fullname}</h2>
-    <p><b>Transaction ID:</b> ${transctionid}</p>
-    <p><b>Order ID:</b> ${newOrder._id}</p>
-    <h3>Order Details:</h3>
-    <ul>
-      <li><b>Name:</b> ${newOrder.name}</li>
-      <li><b>Mobile:</b> ${newOrder.mobile}</li>
-      <li><b>Color:</b> ${newOrder.color}</li>
-      <li><b>Sides:</b> ${newOrder.sides}</li>
-      <li><b>Binding:</b> ${newOrder.binding}</li>
-      <li><b>Copies:</b> ${newOrder.copies}</li>
-      <li><b>Original Price:</b> ${newOrder.originalprice}</li>
-      <li><b>Offer Price:</b> ${newOrder.discountprice}</li>
-      <li><b>Address:</b> ${newOrder.address}</li>
-      <li><b>College Info:</b> ${newOrder.college}, ${newOrder.year}, ${
-        newOrder.section
-      }, ${newOrder.rollno}</li>
-      <li><b>Description:</b> ${newOrder.description || "N/A"}</li>
-    </ul>
-    <li><b>Mode of payment :</b> ${newOrder.payment}</li>
-    <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
-    <p>🧾 <a href="${
-      uploadedPrint.secure_url
-    }" target="_blank">View Print File</a></p>
-    <p>💳 <a href="${
-      uploadedTransaction.secure_url
-    }" target="_blank">View Transaction</a></p>
-  `,
+      html: adminEmailHtml,
     });
 
-    console.log("✅ Admin email sent:", adminEmail);
-
-    // ⏳ Add a small delay before sending the user email
+    // ⏳ Small delay before sending user email
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Send confirmation email to the user
-    const userEmail = await resend.emails.send({
+    // Confirmation email to user
+    const userEmailHtml = `
+      <h2>Hello ${user.fullname},</h2>
+      <p>Thank you for placing a print order with <b>MyBookHub</b>!</p>
+      <p>Here are your order details:</p>
+      <ul>
+        <li><b>Color:</b> ${newOrder.color}</li>
+        <li><b>Sides:</b> ${newOrder.sides}</li>
+        <li><b>Binding:</b> ${newOrder.binding}</li>
+        <li><b>Copies:</b> ${newOrder.copies}</li>
+        <li><b>Offer Price:</b> ₹${newOrder.discountprice}</li>
+        <li><b>Order Date:</b> ${newOrder.orderDate.toDateString()}</li>
+      </ul>
+      <p>Your order is being processed and will be delivered soon.</p>
+      <p>Best regards,<br/><b>MyBookHub Team</b></p>
+    `;
+    await resend.emails.send({
       from: "MyBookHub Orders <onboarding@resend.dev>",
       to: user.email,
       subject: "📦 Your Print Order Confirmation - MyBookHub",
-      html: `
-    <h2>Hello ${user.fullname},</h2>
-    <p>Thank you for placing a print order with <b>MyBookHub</b>!</p>
-    <p>Here are your order details:</p>
-    <ul>
-      <li><b>Color:</b> ${newOrder.color}</li>
-      <li><b>Sides:</b> ${newOrder.sides}</li>
-      <li><b>Binding:</b> ${newOrder.binding}</li>
-      <li><b>Copies:</b> ${newOrder.copies}</li>
-      <li><b>Offer Price:</b> ₹${newOrder.discountprice}</li>
-      <li><b>Order Date:</b> ${newOrder.orderDate.toDateString()}</li>
-    </ul>
-    <p>Your order is being processed and will be delivered soon.</p>
-    <p>Best regards,<br/><b>MyBookHub Team</b></p>
-  `,
+      html: userEmailHtml,
     });
 
-    console.log("✅ User email sent:", userEmail);
-
-    res
-      .status(201)
-      .json({ message: "Order placed successfully", order: newOrder });
+    res.status(201).json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
     res.status(500).json({ error: "Internal server error" });
