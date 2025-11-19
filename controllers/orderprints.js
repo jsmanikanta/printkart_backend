@@ -69,7 +69,7 @@ export const orderPrint = async (req, res) => {
     );
     let uploadedTransaction = null;
 
-if (paymentmethod === "UPI") {
+if (payment === "UPI") {
   // If paymentmethod is UPI, screenshot is required
   if (!req.files?.transctionid?.[0]) {
     return res.status(400).json({ message: "Transaction screenshot required" });
@@ -80,7 +80,6 @@ if (paymentmethod === "UPI") {
     "Transactions"
   );
 } else {
-  
   uploadedTransaction = null;
 }
 
