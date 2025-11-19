@@ -67,10 +67,22 @@ export const orderPrint = async (req, res) => {
       req.files.file[0].buffer,
       "PrintOrders"
     );
-    const uploadedTransaction = await uploadToCloudinary(
-      req.files.transctionid[0].buffer,
-      "Transactions"
-    );
+    let uploadedTransaction = null;
+
+if (paymentmethod === "UPI") {
+  // If paymentmethod is UPI, screenshot is required
+  if (!req.files?.transctionid?.[0]) {
+    return res.status(400).json({ message: "Transaction screenshot required" });
+  }
+
+  uploadedTransaction = await uploadToCloudinary(
+    req.files.transctionid[0].buffer,
+    "Transactions"
+  );
+} else {
+  
+  uploadedTransaction = null;
+}
 
     // Save order
     const newOrder = new Prints({
