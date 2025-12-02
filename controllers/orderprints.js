@@ -122,7 +122,8 @@ export const orderPrint = async (req, res) => {
 
     // Email to Admin (use uploadedTransaction URL, not req.body.transctionid)
     const adminEmailHtml = `
-      <h2>New print order placed by ${user.fullname}</h2>
+      <h2>New print order placed by ${newOrder.name}</h2>
+      <p>From the account ${user.fullname}</p>
       <h3>Order Details:</h3>
       <ul>
         <li><b>Name:</b> ${newOrder.name}</li>
