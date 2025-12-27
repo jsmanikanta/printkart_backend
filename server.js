@@ -33,18 +33,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
-// Replace the ENTIRE problematic line with this INLINE version:
 app.get('/anits/previous-years-papers', verifyToken, async (req, res) => {
   try {
-    await mongoose.connection.asPromise();
     const { subject, branch, college, sem, year } = req.query;
     
     if (!subject || !college || !sem || !year) {
-      return res.status(400).json({ success: false, error: "Missing required filters: subject, college, sem, year" });
+      return res.status(400).json({ success: false, error: "Missing required filters" });
     }
 
     const filter = { subject, college, sem, year };
     if (branch) filter.branch = branch;
+
+    // ✅ SAFE DB check - works on Render!
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ success: false, error: "Database not ready" });
+    }
 
     const papersData = await mongoose.connection.collection('papers').find(filter)
       .project({ subject: 1, branch: 1, college: 1, sem: 1, year: 1, file: 1, exam_date: 1, uploaded_at: 1 })
@@ -68,7 +71,7 @@ app.get('/anits/previous-years-papers', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Previous papers error:", error);
-    res.status(500).json({ success: false, error: "Internal server error" });
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
