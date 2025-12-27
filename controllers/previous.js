@@ -2,8 +2,13 @@ const mongoose = require('mongoose');
 
 const getPreviousYears = async (req, res) => {
   try {
-    // Wait for mongoose connection
-    await mongoose.connection.asPromise();
+    // ✅ RENDER-SAFE: Check connection state instead of asPromise()
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ 
+        success: false,
+        error: "Database not ready" 
+      });
+    }
     
     const { subject, branch, college, sem, year } = req.query;
     
@@ -14,21 +19,10 @@ const getPreviousYears = async (req, res) => {
       });
     }
 
-    const filter = {
-      subject: subject,
-      college: college,
-      sem: sem,
-      year: year
-    };
-    
-    if (branch) {
-      filter.branch = branch;
-    }
+    const filter = { subject, college, sem, year };
+    if (branch) filter.branch = branch;
 
-    // NOW safe to use collection
-    const PreviousYearPaperCollection = mongoose.connection.collection('papers');
-    
-    const papersData = await PreviousYearPaperCollection.find(filter)
+    const papersData = await mongoose.connection.collection('papers').find(filter)
       .project({
         subject: 1, branch: 1, college: 1, sem: 1, year: 1, 
         file: 1, exam_date: 1, uploaded_at: 1
@@ -68,4 +62,3 @@ const getPreviousYears = async (req, res) => {
 };
 
 module.exports = { getPreviousYears };
-
