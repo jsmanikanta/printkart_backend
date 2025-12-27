@@ -16,7 +16,6 @@ cloudinary.config({
 
 const Sellbook = async (req, res) => {
   try {
-    console.log("req.userId:", req.userId);
     console.log("req.body:", req.body);
     console.log("req.files keys:", Object.keys(req.files || {}));
 
@@ -26,9 +25,12 @@ const Sellbook = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Accept both field names from frontend
     const {
       name,
       price,
+      category,
+      subcategory,     // Frontend sends this
       categeory,
       subcategeory,
       description,
@@ -38,24 +40,27 @@ const Sellbook = async (req, res) => {
       soldstatus
     } = req.body;
 
-    if (!name?.trim() || !price || !description?.trim() || !location?.trim() || !categeory || !subcategeory) {
+    const finalCategeory = category || categeory;
+    const finalSubcategeory = subcategory || subcategeory;
+
+    console.log("Final categeory:", finalCategeory);
+    console.log("Final subcategeory:", finalSubcategeory);
+
+    if (!name?.trim() || !price || !description?.trim() || !location?.trim() || !finalCategeory || !finalSubcategeory) {
       return res.status(400).json({ 
         message: "Required fields missing",
         received: { 
           name: name?.trim(), 
           price, 
+          categeory: finalCategeory,
+          subcategeory: finalSubcategeory,
           description: description?.trim(), 
-          location: location?.trim(),
-          categeory,
-          subcategeory
+          location: location?.trim()
         }
       });
     }
 
-    let imageFile = req.files?.image;
-    if (!imageFile) imageFile = req.files?.file;
-    if (!imageFile) imageFile = req.files?.photo;
-
+    let imageFile = req.files?.image || req.files?.file || req.files?.photo;
     if (!imageFile || !imageFile.data || imageFile.data.length === 0) {
       return res.status(400).json({ 
         message: "Image file required", 
@@ -69,11 +74,8 @@ const Sellbook = async (req, res) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: "sellbooks", resource_type: "image" },
         (error, result) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(result);
-          }
+          if (error) reject(error);
+          else resolve(result);
         }
       );
       streamifier.createReadStream(fileBuffer).pipe(stream);
@@ -83,8 +85,8 @@ const Sellbook = async (req, res) => {
       name: name.trim(),
       image: uploadResult.secure_url,
       price: parseFloat(price),
-      categeory,
-      subcategeory,
+      categeory: finalCategeory,     // Save as schema expects
+      subcategeory: finalSubcategeory, // Save as schema expects
       description: description.trim(),
       location: location.trim(),
       selltype: selltype || "sell",
@@ -103,42 +105,6 @@ const Sellbook = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding book:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const updateSoldStatus = async (req, res) => {
-  try {
-    const userId = req.userId;
-    const bookId = req.params.bookId;
-    const { soldstatus } = req.body;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    if (!bookId || !soldstatus) {
-      return res.status(400).json({ message: "Book ID and soldstatus required" });
-    }
-
-    if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
-      return res.status(400).json({ message: "Invalid soldstatus" });
-    }
-
-    const book = await Sellbooks.findById(bookId);
-    if (!book) {
-      return res.status(404).json({ message: "Book not found" });
-    }
-
-    if (book.user.toString() !== userId) {
-      return res.status(403).json({ message: "Unauthorized to update this book" });
-    }
-
-    book.soldstatus = soldstatus;
-    await book.save();
-
-    res.status(200).json({ message: "Sold status updated", book });
-  } catch (error) {
-    console.error("Error updating sold status:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
