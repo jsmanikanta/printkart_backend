@@ -1,10 +1,11 @@
 const path = require("path");
 const fs = require("fs");
-const Resend = require("resend").default; // Fixed: Use .default for v4+
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const Resend = require("resend");
 require("dotenv").config();
 
+// ✅ CORRECT Resend v4+ import - NO .default needed
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 cloudinary.v2.config({
@@ -14,7 +15,7 @@ cloudinary.v2.config({
 });
 
 const User = require("../models/user");
-const sellbook = require("../models/sellbooks");
+const Sellbooks = require("../models/sellbooks"); // ✅ Fixed: matches model export
 const OrderedBooks = require("../models/orderedbooks");
 
 // Upload buffer to Cloudinary
@@ -27,8 +28,6 @@ const uploadToCloudinary = async (buffer, folderName) => {
     streamifier.createReadStream(buffer).pipe(stream);
   });
 };
-
-// ... rest of your functions remain exactly the same ...
 
 const Sellbook = async (req, res) => {
   try {
@@ -48,97 +47,140 @@ const Sellbook = async (req, res) => {
     const {
       name,
       price,
-      categeory,
-      subcategeory,
+      categeory,      // ✅ Matches model
+      subcategeory,   // ✅ Matches model
       description,
       location,
-      selltype,
+      selltype,       // ✅ Matches model
       condition,
       soldstatus,
     } = req.body;
 
-    if (!name || !price || !description || !location || !categeory) {
+    if (!name || !price || !description || !location || !categeory || !condition || !selltype) {
       return res.status(400).json({ message: "Required fields missing" });
     }
 
+    // Upload image buffer to Cloudinary
     const uploadResult = await uploadToCloudinary(req.file.buffer, "sellbooks");
 
-    const newBook = new sellbook({
+    const newBook = new Sellbooks({ // ✅ Fixed: Use Sellbooks (model name)
       name,
       image: uploadResult.secure_url,
-      price,
+      price: parseFloat(price), // ✅ Convert to Number
       categeory,
       subcategeory,
       description,
       location,
       selltype,
       condition,
-      soldstatus,
-      userid: userId,
+      soldstatus: soldstatus || "Instock",
+      user: userId, // ✅ Fixed: model uses 'user' not 'userid'
     });
 
     await newBook.save();
 
     // Email admin notification
-    const adminEmail = await resend.emails.send({
-      from: "PrintKart <noreply@printkart.com>",
-      to: "printkart0001@gmail.com",
-      subject: "New book is ready to sell",
-      text: `New book sold by ${user.email}
+    try {
+      await resend.emails.send({
+        from: "PrintKart <noreply@printkart.com>",
+        to: "printkart0001@gmail.com",
+        subject: "New book is ready to sell",
+        text: `New book listed by ${user.email}
 
 Book details:
 - Name: ${newBook.name}
-- Price: ${newBook.price}
+- Price: ₹${newBook.price}
 - Category: ${newBook.categeory}
-- Subcategory: ${newBook.subcategeory}
+- Subcategory: ${newBook.subcategeory || 'N/A'}
 - Description: ${newBook.description}
 - Location: ${newBook.location}
 - Sell type: ${newBook.selltype}
-- Book's Condition: ${newBook.condition}`,
-    });
+- Condition: ${newBook.condition}`,
+      });
+      console.log("✅ Admin notification email sent");
+    } catch (emailError) {
+      console.error("❌ Admin email failed:", emailError.message);
+    }
 
     // Email user confirmation
-    const userEmail = await resend.emails.send({
-      from: "PrintKart <noreply@printkart.com>",
-      to: user.email,
-      subject: "Thank You for Listing Your Book on PrintKart!",
-      html: `
-        <h2>Hello ${user.fullname},</h2>
-        <p>Thank you for choosing <b>PrintKart</b> to sell your book titled "<i>${newBook.name}</i>".</p>
-        <p>We are happy to help you reach book buyers and supporters who appreciate the value you offer.</p>
-        <p>Your book details:</p>
-        <ul>
-          <li>Category: ${newBook.categeory}</li>
-          <li>Price: ₹${newBook.price}</li>
-          <li>Condition: ${newBook.condition}</li>
-          <li>Sell type: ${newBook.selltype}</li>
-        </ul>
-        <p>We will notify you when someone expresses interest or buys your book. In the meantime, you can log into your dashboard to manage your listings.</p>
-        <p>Thank you for being a part of PrintKart community!</p>
-        <p>Warm regards,<br/>The PrintKart Team</p>
-      `,
+    try {
+      await resend.emails.send({
+        from: "PrintKart <noreply@printkart.com>",
+        to: user.email,
+        subject: "Thank You for Listing Your Book on PrintKart!",
+        html: `
+          <h2>Hello ${user.fullname || user.email},</h2>
+          <p>Thank you for choosing <b>PrintKart</b> to sell your book titled "<i>${newBook.name}</i>".</p>
+          <p>Your book is now live and visible to all buyers!</p>
+          <p><strong>Book Details:</strong></p>
+          <ul>
+            <li>📚 Category: ${newBook.categeory}</li>
+            <li>💰 Price: ₹${newBook.price}</li>
+            <li>📍 Location: ${newBook.location}</li>
+            <li>📦 Condition: ${newBook.condition}</li>
+            <li>🎯 Sell Type: ${newBook.selltype}</li>
+          </ul>
+          <p>We will notify you when someone places an order. You can manage your listing from your dashboard.</p>
+          <p>Thank you for being part of PrintKart community!<br/>
+          <strong>The PrintKart Team</strong></p>
+        `,
+      });
+      console.log("✅ User confirmation email sent");
+    } catch (emailError) {
+      console.error("❌ User email failed:", emailError.message);
+    }
+
+    res.status(201).json({ 
+      message: "Book added successfully", 
+      book: newBook 
     });
-
-    console.log("Admin notification email sent:", adminEmail);
-    console.log("User confirmation email sent:", userEmail);
-
-    res.status(201).json({ message: "Book added successfully", Book: newBook });
   } catch (error) {
     console.error("Error adding book:", error);
     res.status(500).json({ error: "Internal server error", details: error.message });
   }
 };
 
+const updateSoldStatus = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const bookId = req.params.bookId;
+    const { soldstatus } = req.body;
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!bookId || !soldstatus)
+      return res.status(400).json({ message: "Book ID and soldstatus required" });
+
+    if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
+      return res.status(400).json({ message: "Invalid soldstatus" });
+    }
+
+    const book = await Sellbooks.findById(bookId);
+    if (!book) return res.status(404).json({ message: "Book not found" });
+
+    if (book.user.toString() !== userId) {
+      return res.status(403).json({ message: "Not authorized to update this book" });
+    }
+
+    book.soldstatus = soldstatus;
+    await book.save();
+
+    res.status(200).json({ message: "Sold status updated", book });
+  } catch (error) {
+    console.error("Error updating sold status:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 const getBookById = async (req, res) => {
   const { id } = req.params;
   try {
-    const book = await sellbook
+    const book = await Sellbooks
       .findById(id)
-      .populate("userid", "fullname email mobileNumber");
+      .populate("user", "fullname email mobileNumber"); // ✅ Fixed: 'user' field
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
-    return res.status(200).json({
+    res.status(200).json({
       id: book._id,
       name: book.name,
       image: book.image,
@@ -152,45 +194,43 @@ const getBookById = async (req, res) => {
       location: book.location,
       status: book.status,
       soldstatus: book.soldstatus,
-      user: book.userid
-        ? {
-            id: book.userid._id,
-            fullname: book.userid.fullname,
-            email: book.userid.email,
-            mobileNumber: book.userid.mobileNumber,
-          }
-        : null,
+      user: book.user ? {
+        id: book.user._id,
+        fullname: book.user.fullname,
+        email: book.user.email,
+        mobileNumber: book.user.mobileNumber,
+      } : null,
     });
   } catch (error) {
     console.error("Error fetching book:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await sellbook
+    const books = await Sellbooks
       .find()
       .sort({ _id: -1 })
-      .populate("userid", "fullname email mobileNumber");
+      .populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
       books: books.map((book) => ({
         _id: book._id,
         name: book.name || "-",
         image: book.image || "-",
-        status: book.status,
-        price: book.price !== undefined ? book.price : "-",
-        updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
+        status: book.status || "Pending",
+        price: book.price || "-",
+        updatedPrice: book.updatedPrice || "-",
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
         category: book.categeory || "-",
         subcategeory: book.subcategeory || "-",
         selltype: book.selltype || "-",
-        userFullName: book.userid?.fullname || "-",
-        userEmail: book.userid?.email || "-",
-        userMobile: book.userid?.mobileNumber || "-",
+        userFullName: book.user?.fullname || "-",
+        userEmail: book.user?.email || "-",
+        userMobile: book.user?.mobileNumber || "-",
       })),
     });
   } catch (error) {
@@ -212,9 +252,9 @@ const bookOrdered = async (req, res) => {
       return res.status(400).json({ message: "Book ID is required" });
     }
 
-    const book = await sellbook
+    const book = await Sellbooks
       .findById(bookId)
-      .populate("userid", "fullname email mobileNumber");
+      .populate("user", "fullname email mobileNumber");
 
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
@@ -230,73 +270,51 @@ const bookOrdered = async (req, res) => {
     }
 
     if (action === "confirm") {
-      // Buyer confirmation email
-      const buyerEmail = await resend.emails.send({
-        from: "PrintKart <noreply@printkart.com>",
-        to: user.email,
-        subject: "Order Confirmation - Your Book Order",
-        html: `
-          <h2>Thank you for your order!</h2>
-          <p>You have ordered the book: <strong>${book.name}</strong></p>
-          <p>Description: ${book.description}</p>
-          <p>Condition: ${book.condition}</p>
-          <p>Price: ₹${book.updatedPrice ?? book.price}</p>
-          <br/>
-          <p>We will contact you shortly.</p>`,
-      });
+      // Send emails with error handling
+      try {
+        await resend.emails.send({
+          from: "PrintKart <noreply@printkart.com>",
+          to: user.email,
+          subject: "Order Confirmation - Your Book Order",
+          html: `
+            <h2>✅ Order Confirmed!</h2>
+            <p>You have ordered: <strong>${book.name}</strong></p>
+            <p>Price: ₹${book.updatedPrice ?? book.price}</p>
+            <p>Condition: ${book.condition}</p>
+            <p>We will contact you shortly for payment & delivery details.</p>
+          `,
+        });
 
-      // Seller notification email
-      const sellerEmail = await resend.emails.send({
-        from: "PrintKart <noreply@printkart.com>",
-        to: book.userid.email,
-        subject: "Your book has been ordered!",
-        html: `
-          <h2>Your book has been ordered!</h2>
-          <p>Book: <strong>${book.name}</strong></p>
-          <p>Ordered by: ${user.fullname} (${user.email})</p>
-          <p>Contact Number: <a href="tel:${user.mobileNumber}">${user.mobileNumber}</a></p>
-          <p>You can contact the buyer via email or phone.</p>
-          <br/>
-          <p><a href="mailto:${user.email}"><button style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Contact Buyer by Email</button></a></p>
-          <p><a href="tel:${user.mobileNumber}"><button style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Call Buyer</button></a></p>`,
-      });
-
-      // Admin notification email
-      const adminEmail = await resend.emails.send({
-        from: "PrintKart <noreply@printkart.com>",
-        to: "printkart0001@gmail.com",
-        subject: "Book Ordered alert",
-        html: `
-          <h2>A Book has been ordered!</h2>
-          <p>Book: <strong>${book.name}</strong></p>
-          <p>Book seller: <strong>${book.userid.fullname}</strong></p>
-          <p>Book seller email: <strong>${book.userid.email}</strong></p>
-          <p>Ordered by: ${user.fullname}</p> 
-          <p>Buyer mail: ${user.email}</p>
-          <p>Buyer Contact Number: <a href="tel:${user.mobileNumber}">${user.mobileNumber}</a></p>
-          <p>Seller Contact Number: <a href="tel:${book.userid.mobileNumber}">${book.userid.mobileNumber}</a></p>
-          <br/>`,
-      });
+        await resend.emails.send({
+          from: "PrintKart <noreply@printkart.com>",
+          to: book.user.email,
+          subject: "🎉 Your book has been ordered!",
+          html: `
+            <h2>Your book "${book.name}" has been ordered!</h2>
+            <p><strong>Buyer:</strong> ${user.fullname} (${user.email})</p>
+            <p><strong>Phone:</strong> <a href="tel:${user.mobileNumber}">${user.mobileNumber}</a></p>
+            <p>Contact buyer to arrange payment & delivery.</p>
+          `,
+        });
+        console.log("✅ Order emails sent successfully");
+      } catch (emailError) {
+        console.error("❌ Order emails failed:", emailError.message);
+      }
 
       const orderedBook = new OrderedBooks({
         buyerid: userId,
         bookid: bookId,
         review: "",
       });
-
       await orderedBook.save();
 
-      console.log("Order emails sent:", { buyerEmail, sellerEmail, adminEmail });
-
-      return res
-        .status(200)
-        .json({ message: "Order confirmed and emails sent", book });
+      res.status(200).json({ message: "Order confirmed successfully", book });
+    } else {
+      res.status(400).json({ message: "Invalid action. Use 'confirm' or 'decline'" });
     }
-
-    return res.status(400).json({ message: "Invalid action" });
   } catch (error) {
     console.error("Error in bookOrdered:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
