@@ -189,7 +189,7 @@ const updateSoldStatus = async (req, res) => {
 const getBookById = async (req, res) => {
   const { id } = req.params;
   try {
-    const book = await sellbook
+    const book = await sellbooks
       .findById(id)
       .populate("user", "fullname email mobileNumber");
     if (!book) {
@@ -226,7 +226,7 @@ const getBookById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await sellbook
+    const books = await sellbooks
       .find()
       .sort({ _id: -1 })
       .populate("user", "fullname email mobileNumber");
@@ -269,7 +269,7 @@ const bookOrdered = async (req, res) => {
       return res.status(400).json({ message: "Book ID is required" });
     }
 
-    const book = await sellbook
+    const book = await sellbooks
       .findById(bookId)
       .populate("user", "fullname email mobileNumber");
 
