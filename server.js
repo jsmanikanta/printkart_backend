@@ -21,7 +21,7 @@ const userroute = require("./routes/userroute");
 const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
-const papers=require("./controllers/previous");
+const { getPreviousYears } = papers; 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/orders", orders);
@@ -34,7 +34,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
-app.get('/anits/previous-years-papers', verifyToken, papers.getPreviousYears);
+app.get('/anits/previous-years-papers', verifyToken, getPreviousYears); // ✅ Fixed route
+
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
