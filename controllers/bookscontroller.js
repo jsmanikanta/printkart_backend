@@ -1,22 +1,22 @@
 const path = require("path");
-const fs = require("fs");
-const Resend = require("resend");
-const cloudinary = require("cloudinary").v2;
+const dotenv = require("dotenv");
+const { Resend } = require("resend");
+const User = require("../models/user");
+const Prints = require("../models/prints");
+const cloudinary = require("cloudinary");
 const streamifier = require("streamifier");
-require("dotenv").config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);  // ✅ PERFECT
+dotenv.config();
 
+// Configure Cloudinary
 cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
   api_secret: process.env.API_SECRET,
 });
 
-// ✅ ADD THESE MODEL IMPORTS RIGHT HERE
-const User = require("../models/user");
-const Sellbooks = require("../models/sellbooks");  // Model exports 'Sellbooks'
-const OrderedBooks = require("../models/orderedbooks");
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Upload buffer to Cloudinary
 const uploadToCloudinary = async (buffer, folderName) => {
@@ -29,154 +29,138 @@ const uploadToCloudinary = async (buffer, folderName) => {
   });
 };
 
-const Sellbook = async (req, res) => {
+exports.orderPrint = async (req, res) => {
   try {
-    console.log("req.userId:", req.userId);
-    console.log("req.body:", req.body);
-    console.log("req.file:", req.file);
-    
-    const userId = req.userId; 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    console.log("DEBUG req.files:", Object.keys(req.files || {}));
 
-    if (!req.body) return res.status(400).json({ message: "No data received" });
-    if (!req.file) return res.status(400).json({ message: "Image file is required" });
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const {
-      name, price, categeory, subcategeory, description, location, selltype, condition, soldstatus
+      name,
+      mobile,
+      color,
+      sides,
+      address,
+      originalprice,
+      discountprice,
+      rollno,
+      college,
+      year,
+      section,
+      description,
+      binding,
+      copies,
+      payment,
     } = req.body;
 
-    if (!name || !price || !description || !location || !categeory || !condition || !selltype) {
+    if (!color || !sides)
       return res.status(400).json({ message: "Required fields missing" });
+
+    if (!req.files?.file?.[0])
+      return res.status(400).json({ message: "Print PDF file is required" });
+
+    if (!payment)
+      return res.status(400).json({ message: "Payment method is required" });
+
+    const MAX_SIZE = 10 * 1024 * 1024;
+
+    const pdfFile = req.files.file[0];
+    if (pdfFile.size > MAX_SIZE)
+      return res.status(400).json({ message: "PDF file must be under 10MB" });
+
+    const uploadedPrint = await uploadToCloudinary(
+      pdfFile.buffer,
+      "PrintOrders"
+    );
+
+    let uploadedTransaction = null;
+    if (payment === "UPI") {
+      if (!req.files?.transctionid?.[0]) {
+        return res
+          .status(400)
+          .json({ message: "Transaction screenshot required" });
+      }
+
+      const trxFile = req.files.transctionid[0];
+      if (trxFile.size > MAX_SIZE)
+        return res
+          .status(400)
+          .json({ message: "Transaction image must be under 10MB" });
+
+      uploadedTransaction = await uploadToCloudinary(
+        trxFile.buffer,
+        "Transactions"
+      );
     }
 
-    // Upload image
-    const uploadResult = await uploadToCloudinary(req.file.buffer, "sellbooks");
-
-    // ✅ Use Sellbooks (matches your model export)
-    const newBook = new Sellbooks({
+    const newOrder = new Prints({
       name,
-      image: uploadResult.secure_url,
-      price: parseFloat(price),
-      categeory,
-      subcategeory: subcategeory || "",
+      mobile,
+      file: uploadedPrint.secure_url,
+      originalprice,
+      discountprice,
+      color,
+      sides,
+      binding,
+      copies,
+      address,
+      college,
+      year,
+      section,
+      rollno,
       description,
-      location,
-      selltype,
-      condition,
-      soldstatus: soldstatus || "Instock",
-      user: userId  // ✅ Model uses 'user' field
+      payment,
+      transctionid: uploadedTransaction ? uploadedTransaction.secure_url : "",
+      userid: userId,
     });
 
-    await newBook.save();
+    await newOrder.save();
 
     // Admin email
-    try {
-      await resend.emails.send({
-        from: "PrintKart <noreply@printkart.com>",
-        to: "printkart0001@gmail.com",
-        subject: "🆕 New Book Listed",
-        html: `<h2>${newBook.name}</h2><p>By: ${user.email}</p>`
-      });
-      console.log("✅ Admin email sent");
-    } catch (e) {
-      console.error("Admin email failed:", e.message);
-    }
+    await resend.emails.send({
+      from: "MyBookHub Admin <onboarding@resend.dev>",
+      to: "printkart0001@gmail.com",
+      subject: "🖨️ New Print Order Placed - MyBookHub",
+      html: `
+        <h2>New Print Order</h2>
+        <p><b>User:</b> ${user.fullname}</p>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Mobile:</b> ${mobile}</p>
+        <p><b>Payment:</b> ${payment}</p>
+        <p><a href="${uploadedPrint.secure_url}">View Print File</a></p>
+        ${
+          uploadedTransaction
+            ? `<p><a href="${uploadedTransaction.secure_url}">View Transaction</a></p>`
+            : ""
+        }
+      `,
+    });
 
     // User email
-    try {
-      await resend.emails.send({
-        from: "PrintKart <noreply@printkart.com>",
-        to: user.email,
-        subject: "✅ Book Listed Successfully",
-        html: `<h2>Your book "${newBook.name}" is now live!</h2>`
-      });
-      console.log("✅ User email sent");
-    } catch (e) {
-      console.error("User email failed:", e.message);
-    }
+    await resend.emails.send({
+      from: "MyBookHub Orders <onboarding@resend.dev>",
+      to: user.email,
+      subject: "📦 Print Order Confirmation",
+      html: `
+        <h2>Hello ${user.fullname},</h2>
+        <p>Your print order has been received.</p>
+        <p><b>Price:</b> ₹${discountprice}</p>
+        <p>We will notify you when it is ready.</p>
+        <br/>
+        <b>MyBookHub Team</b>
+      `,
+    });
 
-    res.status(201).json({ message: "Book added successfully", book: newBook });
+    res.status(201).json({
+      message: "Order placed successfully",
+      order: newOrder,
+    });
   } catch (error) {
-    console.error("Error adding book:", error);
+    console.error("Order error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-};
-
-const getAllBooks = async (req, res) => {
-  try {
-    const books = await Sellbooks.find()
-      .sort({ _id: -1 })
-      .populate("user", "fullname email mobileNumber");
-
-    res.status(200).json({ books });
-  } catch (error) {
-    console.error("Error fetching books:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const getBookById = async (req, res) => {
-  try {
-    const book = await Sellbooks.findById(req.params.id)
-      .populate("user", "fullname email mobileNumber");
-    if (!book) return res.status(404).json({ error: "Book not found" });
-    res.status(200).json(book);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const updateSoldStatus = async (req, res) => {
-  try {
-    const book = await Sellbooks.findById(req.params.bookId);
-    if (!book) return res.status(404).json({ message: "Book not found" });
-
-    const { soldstatus } = req.body;
-    if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
-      return res.status(400).json({ message: "Invalid soldstatus" });
-    }
-
-    book.soldstatus = soldstatus;
-    await book.save();
-
-    res.status(200).json({ message: "Status updated", book });
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const bookOrdered = async (req, res) => {
-  try {
-    if (!req.userId) return res.status(401).json({ message: "User not logged in" });
-
-    const { bookId, action } = req.body;
-    const book = await Sellbooks.findById(bookId).populate("user");
-    if (!book) return res.status(404).json({ message: "Book not found" });
-
-    if (action === "confirm") {
-      const orderedBook = new OrderedBooks({
-        buyerid: req.userId,
-        bookid: bookId,
-        review: ""
-      });
-      await orderedBook.save();
-
-      res.status(200).json({ message: "Order confirmed", order: orderedBook });
-    } else {
-      res.status(400).json({ message: "Use action: confirm" });
-    }
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-module.exports = {
-  Sellbook,
-  getBookById,
-  getAllBooks,
-  updateSoldStatus,
-  bookOrdered,
 };
