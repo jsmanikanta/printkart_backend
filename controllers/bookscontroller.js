@@ -364,7 +364,7 @@ const bookOrdered = async (req, res) => {
 
 // controllers/bookscontroller.js - ADD THIS FUNCTION
 
-const getBooksByUserId = async (req, res) => {
+const getBooksByUserId = async (req, MongoDB, res) => {
   try {
     const userId = req.params.userId || req.userId; // Support both admin and user access
     
@@ -383,22 +383,22 @@ const getBooksByUserId = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized to view these books" });
     }
 
-    // Fetch user's books with population and filtering
-    const books = await Sellbooks.find({ user: userId })
-      .populate("user", "fullname email mobileNumber")
-      .sort({ createdAt: -1 }) // Latest first
-      .select("-__v"); // Exclude version key
-
-    // Filter by status if requested
+    // Fetch user's books with population and filtering - DATABASE QUERY (efficient)
+    const booksQuery = { user: userId };
     const { status, soldstatus } = req.query;
-    let filteredBooks = books;
 
+    // Add filters to MongoDB query instead of JS filter
     if (status) {
-      filteredBooks = books.filter(book => book.status === status);
+      booksQuery.status = status;
     }
     if (soldstatus) {
-      filteredBooks = books.filter(book => book.soldstatus === soldstatus);
+      booksQuery.soldstatus = soldstatus;
     }
+
+    const books = await Sellbooks.find(booksQuery)
+      .populate("user", "fullname email mobileNumber")
+      .sort({ createdAt: -1 }) 
+      .select("-__v"); 
 
     res.status(200).json({
       success: true,
@@ -408,24 +408,24 @@ const getBooksByUserId = async (req, res) => {
         email: user.email,
         isAdmin: user.isAdmin || false
       },
-      count: filteredBooks.length,
-      books: filteredBooks.map(book => ({
+      count: books.length,
+      books: books.map(book => ({
         id: book._id,
         name: book.name,
         image: book.image,
         originalPrice: book.price,
-        updatedPrice: book.updatedPrice,
-        categeory: book.categeory,
-        subcategeory: book.subcategeory,
+        updatedPrice: book.updatedPrice || book.price, 
+        category: book.category || book.categeory,     
+        subcategory: book.subcategory || book.subcategeory, 
         condition: book.condition,
         description: book.description,
         location: book.location,
         selltype: book.selltype,
-        status: book.status,
-        soldstatus: book.soldstatus,
-        date_added: book.date_added,
+        status: book.status || "pending",             
+        soldstatus: book.soldstatus || "Instock", 
+        date_added: book.createdAt || book.date_added, 
         actions: {
-          canUpdate: book.status !== "Rejected" && req.userId.toString() === userId,
+          canUpdate: (book.status !== "Rejected") && (req.userId.toString() === userId),
           canDelete: req.userId.toString() === userId
         }
       }))
@@ -433,9 +433,13 @@ const getBooksByUserId = async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching user books:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ 
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
+
 
 module.exports = {
   Sellbook,
