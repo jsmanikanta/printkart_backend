@@ -125,7 +125,7 @@ const sellbooksschema = new mongoose.Schema({
       "Travel & Exploration",
       "Cookbooks & DIY",
     ],
-    ["None"],
+    "Others",
   },
   selltype: {
     type: String,
