@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
-app.get('/previous-years', papers);
+app.get('/anits', papers);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
