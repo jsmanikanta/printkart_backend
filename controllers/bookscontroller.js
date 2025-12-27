@@ -5,7 +5,6 @@ const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 const verifyToken = require("../verifyToken");
 require("dotenv").config();
-
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 cloudinary.v2.config({
