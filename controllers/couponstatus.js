@@ -1,6 +1,6 @@
 // controllers/couponController.js
 const mongoose = require("mongoose");
-const Couponstatus = require("../models/Couponstatus");
+const Couponstatus = require("../models/coupon");
 
 const verifyCoupon = async (req, res) => {
   try {
@@ -95,3 +95,4 @@ const verifyCoupon = async (req, res) => {
 };
 
 module.exports = { verifyCoupon };
+
