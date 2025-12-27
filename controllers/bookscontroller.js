@@ -358,6 +358,81 @@ const bookOrdered = async (req, res) => {
   }
 };
 
+// controllers/bookscontroller.js - ADD THIS FUNCTION
+
+const getBooksByUserId = async (req, res) => {
+  try {
+    const userId = req.params.userId || req.userId; // Support both admin and user access
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid user ID format" });
+    }
+
+    const user = await User.findById(userId).select("fullname email isAdmin");
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check authorization: User can only see their own books, Admin can see any
+    if (userId !== req.userId.toString() && !req.user?.isAdmin) {
+      return res.status(403).json({ error: "Unauthorized to view these books" });
+    }
+
+    // Fetch user's books with population and filtering
+    const books = await Sellbooks.find({ user: userId })
+      .populate("user", "fullname email mobileNumber")
+      .sort({ createdAt: -1 }) // Latest first
+      .select("-__v"); // Exclude version key
+
+    // Filter by status if requested
+    const { status, soldstatus } = req.query;
+    let filteredBooks = books;
+
+    if (status) {
+      filteredBooks = books.filter(book => book.status === status);
+    }
+    if (soldstatus) {
+      filteredBooks = books.filter(book => book.soldstatus === soldstatus);
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        fullname: user.fullname,
+        email: user.email,
+        isAdmin: user.isAdmin || false
+      },
+      count: filteredBooks.length,
+      books: filteredBooks.map(book => ({
+        id: book._id,
+        name: book.name,
+        image: book.image,
+        originalPrice: book.price,
+        updatedPrice: book.updatedPrice,
+        categeory: book.categeory,
+        subcategeory: book.subcategeory,
+        condition: book.condition,
+        description: book.description,
+        location: book.location,
+        selltype: book.selltype,
+        status: book.status,
+        soldstatus: book.soldstatus,
+        date_added: book.date_added,
+        actions: {
+          canUpdate: book.status !== "Rejected" && req.userId.toString() === userId,
+          canDelete: req.userId.toString() === userId
+        }
+      }))
+    });
+
+  } catch (error) {
+    console.error("Error fetching user books:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   Sellbook,
   getBookById,
