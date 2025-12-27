@@ -1,5 +1,5 @@
 const express = require('express');
-const { getPreviousYears } = require('../controllers/previousYearsController'); // Adjust path as needed
+const { getPreviousYears } = require('../controllers/previous'); 
 
 const router = express.Router();
 
