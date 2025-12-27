@@ -23,10 +23,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
-const User = require("../models/user");
-const sellbook = require("../models/sellbooks");
-
 // Cloudinary config already present
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
