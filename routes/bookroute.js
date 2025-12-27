@@ -9,6 +9,7 @@ const {
   getAllBooks,
   updateSoldStatus,
   bookOrdered,
+  getBooksByUserId,
 } = require("../controllers/bookscontroller");
 
 const { verifyToken } = require("../verifyToken");
