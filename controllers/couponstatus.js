@@ -72,7 +72,7 @@ const verifyCoupon = async (req, res) => {
         code: couponCode,
         status: false,
         discountPercentage: discount,
-        usedDate: null,
+        usedDate: Date.now(),
       });
     }
 
@@ -95,4 +95,5 @@ const verifyCoupon = async (req, res) => {
 };
 
 module.exports = { verifyCoupon };
+
 
