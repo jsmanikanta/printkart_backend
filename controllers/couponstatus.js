@@ -12,6 +12,7 @@ const verifyCoupon = async (req, res) => {
     }
 
     const userId = req.user && req.user.id;
+    const { name, email, mobile } = req.user || {};
     const { code } = req.body;
 
     if (!userId) {
@@ -30,7 +31,6 @@ const verifyCoupon = async (req, res) => {
 
     const couponCode = code.trim().toUpperCase();
 
-    // 1) Find coupon document in couponCodes and check global limit
     const couponDoc = await mongoose
       .connection
       .collection("couponCodes")
@@ -44,11 +44,10 @@ const verifyCoupon = async (req, res) => {
       });
     }
 
-    const discount = couponDoc.discount; // percentage
+    const discount = couponDoc.discount;
     const limit = couponDoc.limit ?? Infinity;
     const used = couponDoc.used ?? 0;
 
-    // If global usage limit reached
     if (used >= limit) {
       return res.status(400).json({
         success: false,
@@ -57,8 +56,7 @@ const verifyCoupon = async (req, res) => {
       });
     }
 
-    // 2) Check if this user already used this coupon
-    const existingStatus = await Couponstatus.findOne({
+    let existingStatus = await Couponstatus.findOne({
       userid: userId,
       code: couponCode,
     });
@@ -72,45 +70,58 @@ const verifyCoupon = async (req, res) => {
           code: couponCode,
           discountPercentage: existingStatus.discountPercentage,
           usedDate: existingStatus.usedDate,
+          user: {
+            id: userId,
+            name: existingStatus.userName,
+            email: existingStatus.userEmail,
+            mobile: existingStatus.userMobile,
+          },
         },
       });
     }
 
-    // 3) Mark as used for this user AND increment global used count
     const now = new Date();
 
     if (!existingStatus) {
-      await Couponstatus.create({
+      existingStatus = await Couponstatus.create({
         userid: userId,
         code: couponCode,
         status: true,
         discountPercentage: discount,
         usedDate: now,
+        userName: name,
+        userEmail: email,
+        userMobile: mobile,
       });
     } else {
       existingStatus.status = true;
       existingStatus.discountPercentage = discount;
       existingStatus.usedDate = now;
+      existingStatus.userName = name;
+      existingStatus.userEmail = email;
+      existingStatus.userMobile = mobile;
       await existingStatus.save();
     }
 
-    // increment "used" in couponCodes
     await mongoose
       .connection
       .collection("couponCodes")
-      .updateOne(
-        { _id: couponDoc._id },
-        { $inc: { used: 1 } }
-      );
+      .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
 
     return res.status(200).json({
       success: true,
-      status: "available", 
+      status: "available",
       message: "Coupon applied successfully",
       data: {
         code: couponCode,
         discountPercentage: discount,
-        usedDate: now,
+        usedDate: existingStatus.usedDate,
+        user: {
+          id: userId,
+          name,
+          email,
+          mobile,
+        },
       },
     });
   } catch (err) {
