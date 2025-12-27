@@ -1,4 +1,3 @@
-const PreviousYearPaper = require("./models/PreviousYearPaper");
 const verifyToken = require("./verifyToken");
 
 const getPreviousYears = async (req, res) => {
@@ -59,4 +58,5 @@ const getPreviousYears = async (req, res) => {
 };
 
 app.get('previous-years-papers', verifyToken, getPreviousYears);
+
 
