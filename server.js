@@ -33,6 +33,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
+const { getPreviousYears } = require("./controllers/previous");
+app.get('/anits/previous-years-papers', verifyToken, getPreviousYears);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
