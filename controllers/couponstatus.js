@@ -1,4 +1,3 @@
-// controllers/couponController.js
 const mongoose = require("mongoose");
 const Couponstatus = require("../models/coupon");
 
@@ -12,6 +11,7 @@ const verifyCoupon = async (req, res) => {
     }
 
     const userId = req.user && req.user.id;
+    const { name, email, mobile } = req.user || {};
     const { code } = req.body;
 
     if (!userId) {
@@ -30,7 +30,6 @@ const verifyCoupon = async (req, res) => {
 
     const couponCode = code.trim().toUpperCase();
 
-    // 1) Check if coupon code exists in couponCodes collection
     const couponDoc = await mongoose
       .connection
       .collection("couponCodes")
@@ -46,7 +45,6 @@ const verifyCoupon = async (req, res) => {
 
     const discount = couponDoc.discount;
 
-    // 2) Check if user already has a status record for this coupon
     const existingStatus = await Couponstatus.findOne({
       userid: userId,
       code: couponCode,
@@ -61,19 +59,31 @@ const verifyCoupon = async (req, res) => {
         data: {
           code: couponCode,
           discountPercentage: existingStatus.discountPercentage,
+          usedDate: existingStatus.usedDate,
+          user: {
+            id: userId,
+            name,
+            email,
+            mobile,
+          },
         },
       });
     }
+    let record;
+    const now = new Date();
 
-    // Not used yet: create status record if missing
     if (!existingStatus) {
-      await Couponstatus.create({
+      record = await Couponstatus.create({
         userid: userId,
         code: couponCode,
-        status: false,
+        status: true, 
         discountPercentage: discount,
-        usedDate: Date.now(),
+        usedDate: now,
       });
+    } else {
+      existingStatus.usedDate = now;
+      await existingStatus.save();
+      record = existingStatus;
     }
 
     return res.status(200).json({
@@ -83,6 +93,13 @@ const verifyCoupon = async (req, res) => {
       data: {
         code: couponCode,
         discountPercentage: discount,
+        usedDate: record.usedDate,
+        user: {
+          id: userId,
+          name,
+          email,
+          mobile,
+        },
       },
     });
   } catch (err) {
@@ -95,5 +112,4 @@ const verifyCoupon = async (req, res) => {
 };
 
 module.exports = { verifyCoupon };
-
 
