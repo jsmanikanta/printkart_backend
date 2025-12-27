@@ -439,4 +439,5 @@ module.exports = {
   getAllBooks,
   updateSoldStatus,
   bookOrdered,
+  getBooksByUserId,
 };
