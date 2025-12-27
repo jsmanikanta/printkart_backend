@@ -4,6 +4,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
 const multer = require("multer");
+const verifyToken = require("./verifyToken");
 
 dotenv.config();
 
@@ -33,7 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
-app.get('/anits', papers);
+app.get('/anits/previous-years-papers', verifyToken, papers.getPreviousYears);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
