@@ -16,6 +16,7 @@ const { verifyToken } = require("../verifyToken");
 router.post("/sellbook", verifyToken, upload.single("image"), Sellbook);
 router.put("/updateSoldStatus/:bookId", verifyToken, updateSoldStatus);
 router.get("/:id", getBookById);
+router.get('/mybooks', verifyToken, getBooksByUserId);
 router.get("/", getAllBooks);
 router.post("/confirm-order", verifyToken, bookOrdered);
 
