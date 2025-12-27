@@ -11,8 +11,6 @@ const mongoose = require("mongoose");
 const User = require("../models/user");
 const Sellbooks = require("../models/sellbooks"); 
 const OrderedBooks = require("../models/orderedbooks");
-
-// ✅ FIXED: Consistent model reference (Sellbooks)
 const sellbooks = Sellbooks; // Alias for consistency
 
 app.use(express.json());
@@ -38,7 +36,7 @@ const Sellbook = async (req, res) => {
   try {
     console.log("req.userId:", req.userId);
     console.log("req.body:", req.body);
-    console.log("req.files:", req.files); // ✅ FIXED: Use req.files for express-fileupload
+    console.log("req.files:", req.files); 
     console.log("req.body.category:", req.body.category);
     console.log("req.body.subcategory:", req.body.subcategory);
 
@@ -48,23 +46,21 @@ const Sellbook = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ✅ FIXED: Support both field name formats (frontend sends category/subcategory)
     const {
       name,
       price,
       category,
       subcategory,
-      categeory,        // Legacy support
-      subcategeory,     // Legacy support
+      categeory,      
+      subcategeory, 
       description,
       location,
       selltype,
       condition,
       soldstatus,
-      user,             // Frontend might send user ID
+      user,      
     } = req.body;
 
-    // ✅ FIXED: Validate both field formats
     const finalCategory = category || categeory;
     const finalSubcategory = subcategory || subcategeory;
 
@@ -74,17 +70,12 @@ const Sellbook = async (req, res) => {
         missing: { name, price, description, location, category: finalCategory }
       });
     }
-
-    // ✅ FIXED: Handle express-fileupload (req.files instead of req.file)
     const imageFile = req.files?.image;
     if (!imageFile) {
       return res.status(400).json({ message: "Image file is required" });
     }
 
-    // ✅ FIXED: Handle file buffer correctly
     const fileBuffer = imageFile.data;
-
-    // Upload image buffer to Cloudinary
     const uploadResult = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: "sellbooks", resource_type: "image" },
@@ -93,27 +84,26 @@ const Sellbook = async (req, res) => {
       streamifier.createReadStream(fileBuffer).pipe(stream);
     });
 
-    // ✅ FIXED: Use correct model name and field names
     const newBook = new Sellbooks({
       name,
       image: uploadResult.secure_url,
       price: parseFloat(price),
-      category: finalCategory,        // ✅ New field name
-      subcategory: finalSubcategory,  // ✅ New field name
-      categeory: finalCategory,       // Legacy field for backward compatibility
-      subcategeory: finalSubcategory, // Legacy field
+      category: finalCategory,        
+      subcategory: finalSubcategory,  
+      categeory: finalCategory,  
+      subcategeory: finalSubcategory, 
       description,
       location,
       selltype,
       condition,
       soldstatus: soldstatus || "Instock",
-      user: userId,                   // ✅ Standard user field
-      userid: userId,                 // Legacy field support
-      status: "pending"               // Default status
+      user: userId, 
+      userid: userId,     
+      status: "pending" 
     });
 
     await newBook.save();
-    console.log("✅ Book saved:", newBook._id);
+    console.log("Book saved:", newBook._id);
 
     // Email admin notification
     const mailOptions = {
@@ -141,7 +131,6 @@ Book details:
       }
     });
 
-    // Email user confirmation
     const mailToUser = {
       from: process.env.EMAIL_USER,
       to: user.email,
@@ -179,7 +168,6 @@ Book details:
   }
 };
 
-// ✅ FIXED: All model references use Sellbooks consistently
 const updateSoldStatus = async (req, res) => {
   try {
     const userId = req.userId;
@@ -194,13 +182,12 @@ const updateSoldStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid soldstatus" });
     }
 
-    const book = await Sellbooks.findById(bookId); // ✅ FIXED: Sellbooks
+    const book = await Sellbooks.findById(bookId);
     if (!book) return res.status(404).json({ message: "Book not found" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ✅ Verify book belongs to user (security)
     if (book.user.toString() !== userId && book.userid?.toString() !== userId) {
       return res.status(403).json({ message: "Unauthorized to update this book" });
     }
@@ -215,11 +202,10 @@ const updateSoldStatus = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Use correct model name
 const getBookById = async (req, res) => {
   const { id } = req.params;
   try {
-    const book = await Sellbooks  // ✅ FIXED: Sellbooks not sellbooks
+    const book = await Sellbooks  
       .findById(id)
       .populate("user", "fullname email mobileNumber");
       
@@ -233,8 +219,8 @@ const getBookById = async (req, res) => {
       image: book.image,
       price: book.price,
       updatedPrice: book.updatedPrice,
-      category: book.category || book.categeory,      // ✅ Support both
-      subcategory: book.subcategory || book.subcategeory, // ✅ Support both
+      category: book.category || book.categeory,  
+      subcategory: book.subcategory || book.subcategeory,
       selltype: book.selltype,
       condition: book.condition,
       description: book.description,
@@ -256,12 +242,11 @@ const getBookById = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Use correct model name
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Sellbooks  // ✅ FIXED: Sellbooks
+    const books = await Sellbooks  
       .find()
-      .sort({ createdAt: -1 })    // ✅ Better sort field
+      .sort({ createdAt: -1 }) 
       .populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
@@ -275,8 +260,8 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.category || book.categeory || "-",     // ✅ Support both
-        subcategory: book.subcategory || book.subcategeory || "-", // ✅ Support both
+        category: book.category || book.categeory || "-",    
+        subcategory: book.subcategory || book.subcategeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
@@ -288,8 +273,6 @@ const getAllBooks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
-// ✅ FIXED: Use correct model names
 const bookOrdered = async (req, res) => {
   try {
     if (!req.userId) {
@@ -303,7 +286,7 @@ const bookOrdered = async (req, res) => {
       return res.status(400).json({ message: "Book ID is required" });
     }
 
-    const book = await Sellbooks.findById(bookId)  // ✅ FIXED: Sellbooks
+    const book = await Sellbooks.findById(bookId)  
       .populate("user", "fullname email mobileNumber");
 
     if (!book) {
@@ -320,9 +303,8 @@ const bookOrdered = async (req, res) => {
     }
 
     if (action === "confirm") {
-      // ✅ FIXED: Email env variable
       const buyerMailOptions = {
-        from: process.env.EMAIL_USER,  // ✅ Fixed: EMAIL_USER not EMAILUSER
+        from: process.env.EMAIL_USER,  
         to: user.email,
         subject: "Order Confirmation - Your Book Order",
         html: `
@@ -333,7 +315,7 @@ const bookOrdered = async (req, res) => {
       };
 
       const sellerMailOptions = {
-        from: process.env.EMAIL_USER,  // ✅ Fixed
+        from: process.env.EMAIL_USER,  
         to: book.user?.email,
         subject: "Your book has been ordered!",
         html: `
