@@ -1,4 +1,3 @@
-// controllers/couponController.js
 const mongoose = require("mongoose");
 const Couponstatus = require("../models/coupon");
 
@@ -48,6 +47,7 @@ const verifyCoupon = async (req, res) => {
     const limit = couponDoc.limit ?? Infinity;
     const used = couponDoc.used ?? 0;
 
+    // Check global usage limit BEFORE anything else
     if (used >= limit) {
       return res.status(400).json({
         success: false,
@@ -61,6 +61,7 @@ const verifyCoupon = async (req, res) => {
       code: couponCode,
     });
 
+    // Already used by this user → do NOT update DB or increment used
     if (existingStatus && existingStatus.status === true) {
       return res.status(200).json({
         success: true,
@@ -82,6 +83,7 @@ const verifyCoupon = async (req, res) => {
 
     const now = new Date();
 
+    // First time this user uses this coupon
     if (!existingStatus) {
       existingStatus = await Couponstatus.create({
         userid: userId,
@@ -93,7 +95,14 @@ const verifyCoupon = async (req, res) => {
         userEmail: email,
         userMobile: mobile,
       });
+
+      // Increment global used count ONLY on first use per user
+      await mongoose
+        .connection
+        .collection("couponCodes")
+        .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
     } else {
+      // existingStatus exists but status === false (reserved or previously created)
       existingStatus.status = true;
       existingStatus.discountPercentage = discount;
       existingStatus.usedDate = now;
@@ -101,12 +110,13 @@ const verifyCoupon = async (req, res) => {
       existingStatus.userEmail = email;
       existingStatus.userMobile = mobile;
       await existingStatus.save();
-    }
 
-    await mongoose
-      .connection
-      .collection("couponCodes")
-      .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
+      // Increment only now, when turning from unused -> used
+      await mongoose
+        .connection
+        .collection("couponCodes")
+        .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
+    }
 
     return res.status(200).json({
       success: true,
