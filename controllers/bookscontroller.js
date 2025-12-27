@@ -16,14 +16,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload());
 
-const transporter = nodemailer.createTransporter({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
@@ -32,10 +24,6 @@ cloudinary.config({
 
 const Sellbook = async (req, res) => {
   try {
-    console.log("req.userId:", req.userId);
-    console.log("req.body:", req.body);
-    console.log("req.files:", req.files);
-
     const userId = req.userId; 
     const user = await User.findById(userId);
     if (!user) {
@@ -121,31 +109,6 @@ const Sellbook = async (req, res) => {
 
     await newBook.save();
     console.log("Book saved:", newBook._id);
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: "printkart0001@gmail.com",
-      subject: "New book listed",
-      text: `New book by ${user.fullname}\nName: ${newBook.name}\nPrice: ₹${newBook.price}\nCategory: ${finalCategory}`
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) console.error("Admin email failed:", error);
-      else console.log("Admin email sent:", info.response);
-    });
-
-    const mailToUser = {
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Book listed successfully!",
-      html: `<p>Hi ${user.fullname}, your book "${newBook.name}" has been listed!</p>`
-    };
-
-    transporter.sendMail(mailToUser, (error, info) => {
-      if (error) console.error("User email failed:", error);
-      else console.log("User email sent:", info.response);
-    });
-
     res.status(201).json({ 
       success: true,
       message: "Book added successfully", 
