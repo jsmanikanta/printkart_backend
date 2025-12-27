@@ -256,8 +256,6 @@ const getAllBooks = async (req, res) => {
   }
 };
 
-const OrderedBooks = require("../models/orderedbooks");
-
 const bookOrdered = async (req, res) => {
   try {
     if (!req.userId) {
@@ -357,8 +355,6 @@ const bookOrdered = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-// controllers/bookscontroller.js - ADD THIS FUNCTION
 
 const getBooksByUserId = async (req, MongoDB, res) => {
   try {
