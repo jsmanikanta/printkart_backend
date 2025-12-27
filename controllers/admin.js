@@ -53,6 +53,7 @@ const updatePrintStatus = async (req, res) => {
     "Ready to dispatch",
     "Out for delivery",
     "Delivered",
+    "Cancelled"
   ];
 
   // Validate status
