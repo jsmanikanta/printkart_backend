@@ -24,9 +24,9 @@ const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
 const papers = require("./routes/papersroute");
+const coupon=require("./routes/couponroute");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-// Mount `/orders` route BEFORE JSON/urlencoded parsers for file uploads
 app.use("/orders", orders);
 
 // Mount body parsers AFTER file upload routes
@@ -38,6 +38,7 @@ app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
 app.use("/anits",papers);
+app.use("/coupon",coupon);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
