@@ -11,7 +11,6 @@ const mongoose = require("mongoose");
 const User = require("../models/user");
 const Sellbooks = require("../models/sellbooks"); 
 const OrderedBooks = require("../models/orderedbooks");
-const sellbooks = Sellbooks; // Alias for consistency
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +24,6 @@ const transporter = nodemailer.createTransporter({
   },
 });
 
-// Cloudinary config
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
@@ -36,9 +34,7 @@ const Sellbook = async (req, res) => {
   try {
     console.log("req.userId:", req.userId);
     console.log("req.body:", req.body);
-    console.log("req.files:", req.files); 
-    console.log("req.body.category:", req.body.category);
-    console.log("req.body.subcategory:", req.body.subcategory);
+    console.log("req.files:", req.files);
 
     const userId = req.userId; 
     const user = await User.findById(userId);
@@ -52,113 +48,106 @@ const Sellbook = async (req, res) => {
       category,
       subcategory,
       categeory,      
-      subcategeory, 
+      subcategeory,   
       description,
       location,
       selltype,
       condition,
       soldstatus,
-      user,      
+      frontendUserId
     } = req.body;
 
-    const finalCategory = category || categeory;
+    const finalCategory = category || categeory || subcategory;
     const finalSubcategory = subcategory || subcategeory;
 
-    if (!name || !price || !description || !location || !finalCategory) {
+    console.log("Final category:", finalCategory);
+    console.log("Final subcategory:", finalSubcategory);
+
+    if (!name?.trim() || !price || !description?.trim() || !location?.trim() || !finalCategory) {
       return res.status(400).json({ 
         message: "Required fields missing",
-        missing: { name, price, description, location, category: finalCategory }
+        received: { 
+          name: name?.trim(), 
+          price, 
+          description: description?.trim(), 
+          location: location?.trim(),
+          category: finalCategory,
+          allFields: req.body 
+        }
       });
     }
+
     const imageFile = req.files?.image;
     if (!imageFile) {
-      return res.status(400).json({ message: "Image file is required" });
+      return res.status(400).json({ message: "Image file 'image' is required" });
     }
 
     const fileBuffer = imageFile.data;
+
     const uploadResult = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: "sellbooks", resource_type: "image" },
-        (error, result) => (error ? reject(error) : resolve(result))
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary error:", error);
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
       );
       streamifier.createReadStream(fileBuffer).pipe(stream);
     });
 
+    console.log("Cloudinary upload success:", uploadResult.secure_url);
+
     const newBook = new Sellbooks({
-      name,
+      name: name.trim(),
       image: uploadResult.secure_url,
       price: parseFloat(price),
-      category: finalCategory,        
-      subcategory: finalSubcategory,  
-      categeory: finalCategory,  
-      subcategeory: finalSubcategory, 
-      description,
-      location,
-      selltype,
-      condition,
+      category: finalCategory,
+      subcategory: finalSubcategory,
+      categeory: finalCategory,
+      subcategeory: finalSubcategory,
+      description: description.trim(),
+      location: location.trim(),
+      selltype: selltype || "sell",
+      condition: condition || "Good",
       soldstatus: soldstatus || "Instock",
-      user: userId, 
-      userid: userId,     
-      status: "pending" 
+      user: userId,
+      userid: userId,
+      status: "pending"
     });
 
     await newBook.save();
     console.log("Book saved:", newBook._id);
 
-    // Email admin notification
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: "printkart0001@gmail.com",
-      subject: "New book is ready to sell",
-      text: `New book listed by ${user.fullname} (${user.email})
-
-Book details:
-- Name: ${newBook.name}
-- Price: ₹${newBook.price}
-- Category: ${finalCategory}
-- Subcategory: ${finalSubcategory}
-- Description: ${newBook.description}
-- Location: ${newBook.location}
-- Sell type: ${newBook.selltype}
-- Condition: ${newBook.condition}`,
+      subject: "New book listed",
+      text: `New book by ${user.fullname}\nName: ${newBook.name}\nPrice: ₹${newBook.price}\nCategory: ${finalCategory}`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Failed to send book notification email:", error);
-      } else {
-        console.log("Book notification email sent:", info.response);
-      }
+      if (error) console.error("Admin email failed:", error);
+      else console.log("Admin email sent:", info.response);
     });
 
     const mailToUser = {
       from: process.env.EMAIL_USER,
       to: user.email,
-      subject: "Thank You for Listing Your Book on PrintKart!",
-      html: `
-        <h2>Hello ${user.fullname},</h2>
-        <p>Thank you for listing your book "<i>${newBook.name}</i>" on PrintKart!</p>
-        <p>Book details:</p>
-        <ul>
-          <li>Category: ${finalCategory}</li>
-          <li>Price: ₹${newBook.price}</li>
-          <li>Condition: ${newBook.condition}</li>
-          <li>Sell type: ${newBook.selltype}</li>
-        </ul>
-        <p>We will notify you when someone shows interest!</p>
-        <p>Best,<br/>PrintKart Team</p>
-      `,
+      subject: "Book listed successfully!",
+      html: `<p>Hi ${user.fullname}, your book "${newBook.name}" has been listed!</p>`
     };
 
     transporter.sendMail(mailToUser, (error, info) => {
-      if (error) {
-        console.error("Failed to send user notification email:", error);
-      } else {
-        console.log("User notification email sent:", info.response);
-      }
+      if (error) console.error("User email failed:", error);
+      else console.log("User email sent:", info.response);
     });
 
     res.status(201).json({ 
+      success: true,
       message: "Book added successfully", 
       book: newBook 
     });
@@ -185,9 +174,6 @@ const updateSoldStatus = async (req, res) => {
     const book = await Sellbooks.findById(bookId);
     if (!book) return res.status(404).json({ message: "Book not found" });
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
     if (book.user.toString() !== userId && book.userid?.toString() !== userId) {
       return res.status(403).json({ message: "Unauthorized to update this book" });
     }
@@ -205,7 +191,7 @@ const updateSoldStatus = async (req, res) => {
 const getBookById = async (req, res) => {
   const { id } = req.params;
   try {
-    const book = await Sellbooks  
+    const book = await Sellbooks
       .findById(id)
       .populate("user", "fullname email mobileNumber");
       
@@ -219,7 +205,7 @@ const getBookById = async (req, res) => {
       image: book.image,
       price: book.price,
       updatedPrice: book.updatedPrice,
-      category: book.category || book.categeory,  
+      category: book.category || book.categeory,
       subcategory: book.subcategory || book.subcategeory,
       selltype: book.selltype,
       condition: book.condition,
@@ -244,9 +230,9 @@ const getBookById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Sellbooks  
+    const books = await Sellbooks
       .find()
-      .sort({ createdAt: -1 }) 
+      .sort({ createdAt: -1 })
       .populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
@@ -260,7 +246,7 @@ const getAllBooks = async (req, res) => {
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.category || book.categeory || "-",    
+        category: book.category || book.categeory || "-",
         subcategory: book.subcategory || book.subcategeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
@@ -273,6 +259,7 @@ const getAllBooks = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 const bookOrdered = async (req, res) => {
   try {
     if (!req.userId) {
@@ -286,7 +273,7 @@ const bookOrdered = async (req, res) => {
       return res.status(400).json({ message: "Book ID is required" });
     }
 
-    const book = await Sellbooks.findById(bookId)  
+    const book = await Sellbooks.findById(bookId)
       .populate("user", "fullname email mobileNumber");
 
     if (!book) {
@@ -304,7 +291,7 @@ const bookOrdered = async (req, res) => {
 
     if (action === "confirm") {
       const buyerMailOptions = {
-        from: process.env.EMAIL_USER,  
+        from: process.env.EMAIL_USER,
         to: user.email,
         subject: "Order Confirmation - Your Book Order",
         html: `
@@ -315,7 +302,7 @@ const bookOrdered = async (req, res) => {
       };
 
       const sellerMailOptions = {
-        from: process.env.EMAIL_USER,  
+        from: process.env.EMAIL_USER,
         to: book.user?.email,
         subject: "Your book has been ordered!",
         html: `
@@ -345,8 +332,7 @@ const bookOrdered = async (req, res) => {
   }
 };
 
-// ✅ FIXED: Remove extra MongoDB param, use correct model
-const getBooksByUserId = async (req, res) => {  // ✅ FIXED: No MongoDB param
+const getBooksByUserId = async (req, res) => {
   try {
     const userId = req.params.userId || req.userId;
     
@@ -364,14 +350,14 @@ const getBooksByUserId = async (req, res) => {  // ✅ FIXED: No MongoDB param
     }
 
     const booksQuery = { 
-      $or: [{ user: userId }, { userid: userId }]  // ✅ Support both user field formats
+      $or: [{ user: userId }, { userid: userId }]
     };
     const { status, soldstatus } = req.query;
 
     if (status) booksQuery.status = status;
     if (soldstatus) booksQuery.soldstatus = soldstatus;
 
-    const books = await Sellbooks.find(booksQuery)  // ✅ FIXED: Sellbooks
+    const books = await Sellbooks.find(booksQuery)
       .populate("user", "fullname email mobileNumber")
       .sort({ createdAt: -1 })
       .select("-__v");
