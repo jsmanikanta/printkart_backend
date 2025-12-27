@@ -39,7 +39,7 @@ const sellbooksschema = new mongoose.Schema({
       "GATE",
       "CAT",
       "IIT JEE",
-      "PYQ books"
+      "PYQ books",
       "others",
     ],
     required: true,
