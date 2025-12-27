@@ -1,24 +1,22 @@
-const path = require("path");
-const fs = require("fs");
-const cloudinary = require("cloudinary").v2;
-const streamifier = require("streamifier");
-const Resend = require("resend");
-require("dotenv").config();
+import path from "path";
+import { Resend } from "resend";
+import dotenv from "dotenv";
+import User from "../models/user.js";
+import Prints from "../models/prints.js";
+import cloudinary from "cloudinary";
+import streamifier from "streamifier";
+dotenv.config();
 
-// ✅ CORRECT Resend v4+ import - NO .default needed
-const resend = new Resend(process.env.RESEND_API_KEY);
-
+// Configure Cloudinary
 cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
   api_secret: process.env.API_SECRET,
 });
 
-const User = require("../models/user");
-const Sellbooks = require("../models/sellbooks"); // ✅ Fixed: matches model export
+const resend = new Resend(process.env.RESEND_API_KEY);
 const OrderedBooks = require("../models/orderedbooks");
 
-// Upload buffer to Cloudinary
 const uploadToCloudinary = async (buffer, folderName) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.v2.uploader.upload_stream(
