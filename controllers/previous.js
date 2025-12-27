@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const getPreviousYears = async (req, res) => {
   try {
-    // ✅ RENDER-SAFE: Check connection state instead of asPromise()
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ 
         success: false,
@@ -62,3 +61,4 @@ const getPreviousYears = async (req, res) => {
 };
 
 module.exports = { getPreviousYears };
+
