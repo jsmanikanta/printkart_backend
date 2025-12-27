@@ -32,6 +32,7 @@ const Sellbook = async (req, res) => {
 
     const {
       name,
+      imagefile,
       price,
       category,
       subcategory,
