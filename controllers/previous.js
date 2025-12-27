@@ -11,15 +11,25 @@ const getPreviousYears = async (req, res) => {
     
     const { subject, branch, college, sem, year } = req.query;
     
-    if (!subject || !college || !sem || !year) {
+    // Trim and validate query params
+    if (!subject?.trim() || !college?.trim() || !sem?.trim() || !year?.trim()) {
       return res.status(400).json({ 
         success: false,
         error: "Missing required filters: subject, college, sem, year" 
       });
     }
 
-    const filter = { subject, college, sem, year };
-    if (branch) filter.branch = branch;
+    // Convert to match database format (strings)
+    const filter = { 
+      subject: subject.trim(), 
+      college: college.trim(), 
+      sem: sem.trim(), 
+      year: year.toString().trim() // Convert to string to match DB
+    };
+    
+    if (branch?.trim()) filter.branch = branch.trim();
+
+    console.log("🔍 Query filter:", filter); // Debug log
 
     const papersData = await mongoose.connection.collection('papers').find(filter)
       .project({
@@ -34,11 +44,11 @@ const getPreviousYears = async (req, res) => {
       success: true,
       count: papersData.length,
       filters: {
-        subject,
-        branch: branch || 'All Branches',
-        college,
-        sem,
-        year
+        subject: subject.trim(),
+        branch: branch?.trim() || 'All Branches',
+        college: college.trim(),
+        sem: sem.trim(),
+        year: year.toString().trim()
       },
       data: papersData.map((paper) => ({
         id: paper._id.toString(),
