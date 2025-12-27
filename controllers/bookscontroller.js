@@ -2,9 +2,6 @@ const path = require("path");
 const fs = require("fs");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
-const verifyToken = require("../verifyToken");
-const express = require("express");
-const fileUpload = require("express-fileupload");
 const mongoose = require("mongoose"); 
 
 const User = require("../models/user");
@@ -21,7 +18,6 @@ const Sellbook = async (req, res) => {
   try {
     console.log("req.userId:", req.userId);
     console.log("req.body:", req.body);
-    console.log("req.files:", req.files);
     console.log("req.files keys:", Object.keys(req.files || {}));
 
     const userId = req.userId; 
@@ -33,8 +29,6 @@ const Sellbook = async (req, res) => {
     const {
       name,
       price,
-      category,
-      subcategory,
       categeory,
       subcategeory,
       description,
@@ -44,10 +38,7 @@ const Sellbook = async (req, res) => {
       soldstatus
     } = req.body;
 
-    const finalCategory = category || categeory || subcategory;
-    const finalSubcategory = subcategory || subcategeory;
-
-    if (!name?.trim() || !price || !description?.trim() || !location?.trim() || !finalCategory) {
+    if (!name?.trim() || !price || !description?.trim() || !location?.trim() || !categeory || !subcategeory) {
       return res.status(400).json({ 
         message: "Required fields missing",
         received: { 
@@ -55,20 +46,17 @@ const Sellbook = async (req, res) => {
           price, 
           description: description?.trim(), 
           location: location?.trim(),
-          category: finalCategory
+          categeory,
+          subcategeory
         }
       });
     }
 
     let imageFile = req.files?.image;
-    if (!imageFile) {
-      imageFile = req.files?.file;
-    }
-    if (!imageFile) {
-      imageFile = req.files?.photo;
-    }
+    if (!imageFile) imageFile = req.files?.file;
+    if (!imageFile) imageFile = req.files?.photo;
 
-    if (!imageFile || !imageFile.data) {
+    if (!imageFile || !imageFile.data || imageFile.data.length === 0) {
       return res.status(400).json({ 
         message: "Image file required", 
         availableFiles: Object.keys(req.files || {})
@@ -95,18 +83,15 @@ const Sellbook = async (req, res) => {
       name: name.trim(),
       image: uploadResult.secure_url,
       price: parseFloat(price),
-      category: finalCategory,
-      subcategory: finalSubcategory,
-      categeory: finalCategory,
-      subcategeory: finalSubcategory,
+      categeory,
+      subcategeory,
       description: description.trim(),
       location: location.trim(),
       selltype: selltype || "sell",
       condition: condition || "Good",
       soldstatus: soldstatus || "Instock",
       user: userId,
-      userid: userId,
-      status: "pending"
+      status: "Pending"
     });
 
     await newBook.save();
@@ -144,7 +129,7 @@ const updateSoldStatus = async (req, res) => {
       return res.status(404).json({ message: "Book not found" });
     }
 
-    if (book.user.toString() !== userId && book.userid?.toString() !== userId) {
+    if (book.user.toString() !== userId) {
       return res.status(403).json({ message: "Unauthorized to update this book" });
     }
 
@@ -173,14 +158,14 @@ const getBookById = async (req, res) => {
       image: book.image,
       price: book.price,
       updatedPrice: book.updatedPrice,
-      category: book.category || book.categeory,
-      subcategory: book.subcategory || book.subcategeory,
+      categeory: book.categeory,
+      subcategeory: book.subcategeory,
       selltype: book.selltype,
       condition: book.condition,
       description: book.description,
       location: book.location,
-      status: book.status || "pending",
-      soldstatus: book.soldstatus || "Instock",
+      status: book.status,
+      soldstatus: book.soldstatus,
       user: book.user ? {
         id: book.user._id,
         fullname: book.user.fullname,
@@ -196,21 +181,21 @@ const getBookById = async (req, res) => {
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Sellbooks.find().sort({ createdAt: -1 }).populate("user", "fullname email mobileNumber");
+    const books = await Sellbooks.find().sort({ date_added: -1 }).populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
       books: books.map((book) => ({
         _id: book._id,
         name: book.name || "-",
         image: book.image || "-",
-        status: book.status || "pending",
+        status: book.status || "Pending",
         price: book.price !== undefined ? book.price : "-",
         updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
         condition: book.condition || "-",
         description: book.description || "-",
         location: book.location || "-",
-        category: book.category || book.categeory || "-",
-        subcategory: book.subcategory || book.subcategeory || "-",
+        categeory: book.categeory || "-",
+        subcategeory: book.subcategeory || "-",
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
@@ -296,7 +281,7 @@ const getBooksByUserId = async (req, res) => {
 
     const books = await Sellbooks.find(booksQuery)
       .populate("user", "fullname email mobileNumber")
-      .sort({ createdAt: -1 })
+      .sort({ date_added: -1 })
       .select("-__v");
 
     res.status(200).json({
@@ -314,18 +299,18 @@ const getBooksByUserId = async (req, res) => {
         image: book.image,
         originalPrice: book.price,
         updatedPrice: book.updatedPrice || book.price,
-        category: book.category || book.categeory,
-        subcategory: book.subcategory || book.subcategeory,
+        categeory: book.categeory,
+        subcategeory: book.subcategeory,
         condition: book.condition,
         description: book.description,
         location: book.location,
         selltype: book.selltype,
-        status: book.status || "pending",
+        status: book.status || "Pending",
         soldstatus: book.soldstatus || "Instock",
-        date_added: book.createdAt,
+        date_added: book.date_added,
         actions: {
-          canUpdate: (book.status !== "Rejected") && (req.userId.toString() === userId),
-          canDelete: req.userId.toString() === userId
+          canUpdate: (book.status !== "Rejected") && (req.userId.toString() === userId.toString()),
+          canDelete: req.userId.toString() === userId.toString()
         }
       }))
     });
