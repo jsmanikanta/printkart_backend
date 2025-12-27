@@ -1,20 +1,15 @@
 const path = require("path");
 const fs = require("fs");
-const nodemailer = require("nodemailer");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 const verifyToken = require("../verifyToken");
 const express = require("express");
 const fileUpload = require("express-fileupload");
-const app = express();
 const mongoose = require("mongoose"); 
+
 const User = require("../models/user");
 const Sellbooks = require("../models/sellbooks"); 
 const OrderedBooks = require("../models/orderedbooks");
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(fileUpload());
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -24,6 +19,11 @@ cloudinary.config({
 
 const Sellbook = async (req, res) => {
   try {
+    console.log("req.userId:", req.userId);
+    console.log("req.body:", req.body);
+    console.log("req.files:", req.files);
+    console.log("req.files keys:", Object.keys(req.files || {}));
+
     const userId = req.userId; 
     const user = await User.findById(userId);
     if (!user) {
@@ -32,25 +32,20 @@ const Sellbook = async (req, res) => {
 
     const {
       name,
-      imagefile,
       price,
       category,
       subcategory,
-      categeory,      
-      subcategeory,   
+      categeory,
+      subcategeory,
       description,
       location,
       selltype,
       condition,
-      soldstatus,
-      frontendUserId
+      soldstatus
     } = req.body;
 
     const finalCategory = category || categeory || subcategory;
     const finalSubcategory = subcategory || subcategeory;
-
-    console.log("Final category:", finalCategory);
-    console.log("Final subcategory:", finalSubcategory);
 
     if (!name?.trim() || !price || !description?.trim() || !location?.trim() || !finalCategory) {
       return res.status(400).json({ 
@@ -60,25 +55,33 @@ const Sellbook = async (req, res) => {
           price, 
           description: description?.trim(), 
           location: location?.trim(),
-          category: finalCategory,
-          allFields: req.body 
+          category: finalCategory
         }
       });
     }
 
-    const imageFile = req.files?.image;
+    let imageFile = req.files?.image;
     if (!imageFile) {
-      return res.status(400).json({ message: "Image file 'image' is required" });
+      imageFile = req.files?.file;
+    }
+    if (!imageFile) {
+      imageFile = req.files?.photo;
     }
 
-    const fileBuffer = imageFile.data;
+    if (!imageFile || !imageFile.data) {
+      return res.status(400).json({ 
+        message: "Image file required", 
+        availableFiles: Object.keys(req.files || {})
+      });
+    }
+
+    const fileBuffer = Buffer.isBuffer(imageFile.data) ? imageFile.data : Buffer.from(imageFile.data);
 
     const uploadResult = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: "sellbooks", resource_type: "image" },
         (error, result) => {
           if (error) {
-            console.error("Cloudinary error:", error);
             reject(error);
           } else {
             resolve(result);
@@ -87,8 +90,6 @@ const Sellbook = async (req, res) => {
       );
       streamifier.createReadStream(fileBuffer).pipe(stream);
     });
-
-    console.log("Cloudinary upload success:", uploadResult.secure_url);
 
     const newBook = new Sellbooks({
       name: name.trim(),
@@ -109,7 +110,7 @@ const Sellbook = async (req, res) => {
     });
 
     await newBook.save();
-    console.log("Book saved:", newBook._id);
+
     res.status(201).json({ 
       success: true,
       message: "Book added successfully", 
@@ -117,7 +118,7 @@ const Sellbook = async (req, res) => {
     });
   } catch (error) {
     console.error("Error adding book:", error);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -127,16 +128,21 @@ const updateSoldStatus = async (req, res) => {
     const bookId = req.params.bookId;
     const { soldstatus } = req.body;
 
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    if (!bookId || !soldstatus)
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!bookId || !soldstatus) {
       return res.status(400).json({ message: "Book ID and soldstatus required" });
+    }
 
     if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
       return res.status(400).json({ message: "Invalid soldstatus" });
     }
 
     const book = await Sellbooks.findById(bookId);
-    if (!book) return res.status(404).json({ message: "Book not found" });
+    if (!book) {
+      return res.status(404).json({ message: "Book not found" });
+    }
 
     if (book.user.toString() !== userId && book.userid?.toString() !== userId) {
       return res.status(403).json({ message: "Unauthorized to update this book" });
@@ -145,25 +151,23 @@ const updateSoldStatus = async (req, res) => {
     book.soldstatus = soldstatus;
     await book.save();
 
-    return res.status(200).json({ message: "Sold status updated", book });
+    res.status(200).json({ message: "Sold status updated", book });
   } catch (error) {
     console.error("Error updating sold status:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const getBookById = async (req, res) => {
   const { id } = req.params;
   try {
-    const book = await Sellbooks
-      .findById(id)
-      .populate("user", "fullname email mobileNumber");
-      
+    const book = await Sellbooks.findById(id).populate("user", "fullname email mobileNumber");
+    
     if (!book) {
       return res.status(404).json({ error: "Book not found" });
     }
     
-    return res.status(200).json({
+    res.status(200).json({
       id: book._id,
       name: book.name,
       image: book.image,
@@ -177,27 +181,22 @@ const getBookById = async (req, res) => {
       location: book.location,
       status: book.status || "pending",
       soldstatus: book.soldstatus || "Instock",
-      user: book.user
-        ? {
-            id: book.user._id,
-            fullname: book.user.fullname,
-            email: book.user.email,
-            mobileNumber: book.user.mobileNumber,
-          }
-        : null,
+      user: book.user ? {
+        id: book.user._id,
+        fullname: book.user.fullname,
+        email: book.user.email,
+        mobileNumber: book.user.mobileNumber
+      } : null
     });
   } catch (error) {
     console.error("Error fetching book:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const getAllBooks = async (req, res) => {
   try {
-    const books = await Sellbooks
-      .find()
-      .sort({ createdAt: -1 })
-      .populate("user", "fullname email mobileNumber");
+    const books = await Sellbooks.find().sort({ createdAt: -1 }).populate("user", "fullname email mobileNumber");
 
     res.status(200).json({
       books: books.map((book) => ({
@@ -215,8 +214,8 @@ const getAllBooks = async (req, res) => {
         selltype: book.selltype || "-",
         userFullName: book.user?.fullname || "-",
         userEmail: book.user?.email || "-",
-        userMobile: book.user?.mobileNumber || "-",
-      })),
+        userMobile: book.user?.mobileNumber || "-"
+      }))
     });
   } catch (error) {
     console.error("Error fetching books:", error);
@@ -237,9 +236,7 @@ const bookOrdered = async (req, res) => {
       return res.status(400).json({ message: "Book ID is required" });
     }
 
-    const book = await Sellbooks.findById(bookId)
-      .populate("user", "fullname email mobileNumber");
-
+    const book = await Sellbooks.findById(bookId).populate("user", "fullname email mobileNumber");
     if (!book) {
       return res.status(404).json({ message: "Book not found" });
     }
@@ -254,45 +251,21 @@ const bookOrdered = async (req, res) => {
     }
 
     if (action === "confirm") {
-      const buyerMailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: "Order Confirmation - Your Book Order",
-        html: `
-          <h2>Thank you for your order!</h2>
-          <p>You have ordered: <strong>${book.name}</strong></p>
-          <p>Price: ₹${book.updatedPrice ?? book.price}</p>
-          <p>We will contact you shortly.</p>`,
-      };
-
-      const sellerMailOptions = {
-        from: process.env.EMAIL_USER,
-        to: book.user?.email,
-        subject: "Your book has been ordered!",
-        html: `
-          <h2>Your book "${book.name}" has been ordered!</h2>
-          <p>Buyer: ${user.fullname} (${user.email})</p>
-          <p>Contact: ${user.mobileNumber}</p>`,
-      };
-
-      await transporter.sendMail(buyerMailOptions);
-      await transporter.sendMail(sellerMailOptions);
-
       const orderedBook = new OrderedBooks({
         buyerid: userId,
         bookid: bookId,
-        review: "",
+        review: ""
       });
 
       await orderedBook.save();
 
-      return res.status(200).json({ message: "Order confirmed", book });
+      res.status(200).json({ message: "Order confirmed", book });
+    } else {
+      res.status(400).json({ message: "Invalid action" });
     }
-
-    return res.status(400).json({ message: "Invalid action" });
   } catch (error) {
     console.error("Error in bookOrdered:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -356,7 +329,6 @@ const getBooksByUserId = async (req, res) => {
         }
       }))
     });
-
   } catch (error) {
     console.error("Error fetching user books:", error);
     res.status(500).json({ error: "Internal server error" });
