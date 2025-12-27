@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
-// Direct collection access - works with existing data
-const PreviousYearPaperCollection = mongoose.connection.collection('papers');
-
 const getPreviousYears = async (req, res) => {
   try {
+    // Wait for mongoose connection
+    await mongoose.connection.asPromise();
+    
     const { subject, branch, college, sem, year } = req.query;
     
     if (!subject || !college || !sem || !year) {
@@ -25,6 +25,9 @@ const getPreviousYears = async (req, res) => {
       filter.branch = branch;
     }
 
+    // NOW safe to use collection
+    const PreviousYearPaperCollection = mongoose.connection.collection('papers');
+    
     const papersData = await PreviousYearPaperCollection.find(filter)
       .project({
         subject: 1, branch: 1, college: 1, sem: 1, year: 1, 
@@ -65,5 +68,4 @@ const getPreviousYears = async (req, res) => {
 };
 
 module.exports = { getPreviousYears };
-
 
