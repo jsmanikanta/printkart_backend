@@ -21,7 +21,7 @@ const userroute = require("./routes/userroute");
 const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
-const { getPreviousYears } = papers; 
+const { getPreviousYears } = ("./controllers/previous"); 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/orders", orders);
