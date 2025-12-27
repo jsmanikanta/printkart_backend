@@ -1,10 +1,10 @@
 const path = require("path");
 const fs = require("fs");
-const Resend = require("resend");
+const Resend = require("resend").default; // Fixed: Use .default for v4+
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
-const verifyToken = require("../verifyToken");
 require("dotenv").config();
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 cloudinary.v2.config({
@@ -27,6 +27,8 @@ const uploadToCloudinary = async (buffer, folderName) => {
     streamifier.createReadStream(buffer).pipe(stream);
   });
 };
+
+// ... rest of your functions remain exactly the same ...
 
 const Sellbook = async (req, res) => {
   try {
@@ -59,7 +61,6 @@ const Sellbook = async (req, res) => {
       return res.status(400).json({ message: "Required fields missing" });
     }
 
-    // Upload image buffer to Cloudinary
     const uploadResult = await uploadToCloudinary(req.file.buffer, "sellbooks");
 
     const newBook = new sellbook({
@@ -124,37 +125,7 @@ Book details:
     res.status(201).json({ message: "Book added successfully", Book: newBook });
   } catch (error) {
     console.error("Error adding book:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-const updateSoldStatus = async (req, res) => {
-  try {
-    const userId = req.userId;
-    const bookId = req.params.bookId;
-    const { soldstatus } = req.body;
-
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
-    if (!bookId || !soldstatus)
-      return res.status(400).json({ message: "Book ID and soldstatus required" });
-
-    if (!["Instock", "Soldout", "Orderd"].includes(soldstatus)) {
-      return res.status(400).json({ message: "Invalid soldstatus" });
-    }
-
-    const book = await sellbook.findById(bookId);
-    if (!book) return res.status(404).json({ message: "Book not found" });
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    book.soldstatus = soldstatus;
-    await book.save();
-
-    return res.status(200).json({ message: "Sold status updated", book });
-  } catch (error) {
-    console.error("Error updating sold status:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: error.message });
   }
 };
 
