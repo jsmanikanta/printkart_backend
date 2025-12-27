@@ -1,4 +1,7 @@
-const verifyToken = require("./verifyToken");
+const mongoose = require('mongoose');
+
+// Direct collection access - works with existing data
+const PreviousYearPaperCollection = mongoose.connection.collection('papers');
 
 const getPreviousYears = async (req, res) => {
   try {
@@ -22,25 +25,29 @@ const getPreviousYears = async (req, res) => {
       filter.branch = branch;
     }
 
-    const papers = await PreviousYearPaper.find(filter)
-      .select("subject branch college sem year file exam_date uploaded_at")
+    const papersData = await PreviousYearPaperCollection.find(filter)
+      .project({
+        subject: 1, branch: 1, college: 1, sem: 1, year: 1, 
+        file: 1, exam_date: 1, uploaded_at: 1
+      })
       .sort({ year: -1 })
-      .limit(50);
+      .limit(50)
+      .toArray();
 
     return res.status(200).json({
       success: true,
-      count: papers.length,
+      count: papersData.length,
       filters: {
         subject,
-        branch,
+        branch: branch || 'All Branches',
         college,
         sem,
         year
       },
-      data: papers.map((paper) => ({
-        id: paper._id,
+      data: papersData.map((paper) => ({
+        id: paper._id.toString(),
         subject: paper.subject,
-        branch: paper.branch,
+        branch: paper.branch || 'N/A',
         college: paper.college,
         sem: paper.sem,
         year: paper.year,
@@ -57,6 +64,6 @@ const getPreviousYears = async (req, res) => {
   }
 };
 
-app.get('previous-years-papers', verifyToken, getPreviousYears);
+module.exports = { getPreviousYears };
 
 
