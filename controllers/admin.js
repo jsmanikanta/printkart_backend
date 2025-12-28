@@ -90,10 +90,15 @@ const updatePrintStatus = async (req, res) => {
 
 const updateStatus = async (req, res) => {
   const { bookId } = req.params;
-  const { status, sellingPrice } = req.body;
+  const { status, sellingPrice, stockStatus } = req.body;  // ✅ Added stockStatus
 
   if (!["Accepted", "Rejected"].includes(status)) {
     return res.status(400).json({ error: "Invalid status" });
+  }
+
+  // ✅ Validate stockStatus
+  if (stockStatus && !["Instock", "Soldout", "Orderd"].includes(stockStatus)) {
+    return res.status(400).json({ error: "Invalid stock status. Must be Instock, Soldout, or Orderd" });
   }
 
   try {
@@ -101,16 +106,24 @@ const updateStatus = async (req, res) => {
     if (!book) return res.status(404).json({ error: "Book not found" });
 
     book.status = status;
+    
     if (sellingPrice !== undefined) {
       book.updatedPrice = sellingPrice;
     }
+    
+    // ✅ Update stock status if provided
+    if (stockStatus !== undefined) {
+      book.soldstatus = stockStatus;
+    }
 
     await book.save();
-    return res
-      .status(200)
-      .json({ message: `Book ${status} successfully`, book });
+    
+    return res.status(200).json({ 
+      message: `Book ${status} successfully`, 
+      book 
+    });
   } catch (error) {
-    console.error("Error updating book status and selling price:", error);
+    console.error("Error updating book status:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
