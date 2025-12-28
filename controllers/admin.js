@@ -88,75 +88,106 @@ const updatePrintStatus = async (req, res) => {
   }
 };
 
-const updateStatus = async (req, res) => {
-  const { bookId } = req.params;
-  const { status, sellingPrice, stockStatus } = req.body;  // ✅ Added stockStatus
-
-  if (!["Accepted", "Rejected"].includes(status)) {
-    return res.status(400).json({ error: "Invalid status" });
-  }
-
-  // ✅ Validate stockStatus
-  if (stockStatus && !["Instock", "Soldout", "Orderd"].includes(stockStatus)) {
-    return res.status(400).json({ error: "Invalid stock status. Must be Instock, Soldout, or Orderd" });
-  }
-
-  try {
-    const book = await Sellbooks.findById(bookId);
-    if (!book) return res.status(404).json({ error: "Book not found" });
-
-    book.status = status;
-    
-    if (sellingPrice !== undefined) {
-      book.updatedPrice = sellingPrice;
-    }
-    
-    // ✅ Update stock status if provided
-    if (stockStatus !== undefined) {
-      book.soldstatus = stockStatus;
-    }
-
-    await book.save();
-    
-    return res.status(200).json({ 
-      message: `Book ${status} successfully`, 
-      book 
-    });
-  } catch (error) {
-    console.error("Error updating book status:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
+// Get all books with user details
 const getAllBooks = async (req, res) => {
   try {
     const books = await Sellbooks.find()
+      .populate({
+        path: "user",
+        select: "fullname email mobileNumber",  // ✅ Exact User fields
+      })
       .sort({ date_added: -1 })
-      .populate("user", "fullname email mobileNumber");
+      .lean();  // ✅ Faster queries
+
+    const formattedBooks = books.map((book) => ({
+      _id: book._id,
+      name: book.name || "-",
+      image: book.image || "-",
+      status: book.status,
+      price: book.price ?? "-",
+      updatedPrice: book.updatedPrice ?? "-",
+      condition: book.condition || "-",
+      description: book.description || "-",
+      location: book.location || "-",
+      category: book.category || "-",  // ✅ Fixed field name
+      subcategory: book.subcategory || "-",
+      selltype: book.selltype || "-",
+      soldstatus: book.soldstatus || "Instock",
+      userFullName: book.user?.fullname || "-",
+      userEmail: book.user?.email || "-",
+      userMobile: book.user?.mobileNumber || "-",
+      date_added: book.date_added,
+      createdAt: book.createdAt,
+      updatedAt: book.updatedAt,
+    }));
 
     res.status(200).json({
-      books: books.map((book) => ({
-        _id: book._id,
-        name: book.name || "-",
-        image: book.image || "-",
-        status: book.status,
-        price: book.price !== undefined ? book.price : "-",
-        updatedPrice: book.updatedPrice !== undefined ? book.updatedPrice : "-",
-        condition: book.condition || "-",
-        description: book.description || "-",
-        location: book.location || "-",
-        category: book.categeory || "-",
-        subcategeory: book.subcategeory,
-        selltype: book.selltype || "-",
-        userFullName: book.user?.fullname || "-",
-        userEmail: book.user?.email || "-",
-        userMobile: book.user?.mobileNumber || "-",
-        date_added: book.date_added,
-      })),
+      success: true,
+      count: formattedBooks.length,
+      books: formattedBooks,
     });
   } catch (error) {
     console.error("Error fetching books:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+};
+
+// Update book status & stock
+const updateStatus = async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const { status, sellingPrice, stockStatus } = req.body;
+
+    // Validate status
+    if (!["Accepted", "Rejected"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: "Status must be 'Accepted' or 'Rejected'",
+      });
+    }
+
+    // Validate stockStatus
+    if (stockStatus && !["Instock", "Soldout", "Ordered", "Rejected"].includes(stockStatus)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid stock status",
+      });
+    }
+
+    const book = await Sellbooks.findById(bookId);
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        error: "Book not found",
+      });
+    }
+
+    // Update fields
+    book.status = status;
+    if (sellingPrice !== undefined) book.updatedPrice = sellingPrice;
+    if (stockStatus !== undefined) book.soldstatus = stockStatus;
+
+    await book.save();
+
+    // Repopulate user for response
+    const updatedBook = await Sellbooks.findById(bookId)
+      .populate("user", "fullname email mobileNumber")
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      message: `Book ${status.toLowerCase()} successfully`,
+      book: updatedBook,
+    });
+  } catch (error) {
+    console.error("Error updating book:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
   }
 };
 
