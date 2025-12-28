@@ -89,42 +89,34 @@ const updatePrintStatus = async (req, res) => {
 };
 const getAllBooks = async (req, res) => {
   try {
-    // Handle BOTH old (userid) AND new (user) books
     const books = await Sellbooks.find()
       .populate({
         path: "user",
-        select: "fullname email mobileNumber"
-      })
-      .populate({
-        path: "userid", 
-        select: "fullname email mobileNumber"
+        select: "fullname email mobileNumber"  // ✅ Matches your model ref: "user"
       })
       .sort({ date_added: -1 });
 
-    const formattedBooks = books.map((book) => {
-      // Try user first, then userid fallback
-      const userData = book.user || book.userid;
-      
-      return {
-        _id: book._id,
-        name: book.name || "-",
-        image: book.image || "-",
-        status: book.status || "Pending",
-        price: book.price ?? "-",
-        updatedPrice: book.updatedPrice ?? "-",
-        condition: book.condition || "-",
-        description: book.description || "-",
-        location: book.location || "-",
-        category: book.category || book.categeory || "-",  // Handle both
-        subcategory: book.subcategory || book.subcategeory || "-",  // Handle both
-        selltype: book.selltype || "-",
-        soldstatus: book.soldstatus || "Instock",
-        userFullName: userData?.fullname || "-",
-        userEmail: userData?.email || "-",
-        userMobile: userData?.mobileNumber || "-",
-        date_added: book.date_added,
-      };
-    });
+    const formattedBooks = books.map((book) => ({
+      _id: book._id,
+      name: book.name || "-",
+      image: book.image || "-",
+      status: book.status || "Pending",
+      price: book.price ?? "-",
+      updatedPrice: book.updatedPrice ?? "-",
+      condition: book.condition || "-",
+      description: book.description || "-",
+      location: book.location || "-",
+      category: book.categeory || "-",        // ✅ YOUR model field
+      subcategory: book.subcategeory || "-",  // ✅ YOUR model field  
+      selltype: book.selltype || "-",
+      soldstatus: book.soldstatus || "Instock",
+      // ✅ USER DETAILS - populated from your model
+      userFullName: book.user?.fullname || "-",
+      userEmail: book.user?.email || "-",
+      userMobile: book.user?.mobileNumber || "-",
+      userId: book.user?._id || "-",
+      date_added: book.date_added,
+    }));
 
     res.status(200).json({
       success: true,
@@ -151,25 +143,36 @@ const updateStatus = async (req, res) => {
 
     book.status = status;
     if (sellingPrice !== undefined) book.updatedPrice = Number(sellingPrice);
-    if (stockStatus !== undefined) book.soldstatus = stockStatus;
+    if (stockStatus !== undefined && ["Instock", "Soldout", "Orderd"].includes(stockStatus)) {
+      book.soldstatus = stockStatus;
+    }
 
     await book.save();
 
-    // Return with populated user
+    // ✅ Return WITH populated user details
     const updatedBook = await Sellbooks.findById(bookId)
-      .populate("user", "fullname email mobileNumber")
-      .populate("userid", "fullname email mobileNumber");
+      .populate("user", "fullname email mobileNumber");
 
-    const userData = updatedBook.user || updatedBook.userid;
-    
     res.status(200).json({
       success: true,
-      message: `Book ${status.toLowerCase()}d`,
+      message: `Book ${status.toLowerCase()}d successfully`,
       book: {
-        ...updatedBook.toObject(),
-        userFullName: userData?.fullname || "-",
-        userEmail: userData?.email || "-",
-        userMobile: userData?.mobileNumber || "-",
+        _id: updatedBook._id,
+        name: updatedBook.name,
+        image: updatedBook.image,
+        status: updatedBook.status,
+        price: updatedBook.price,
+        updatedPrice: updatedBook.updatedPrice,
+        condition: updatedBook.condition,
+        categeory: updatedBook.categeory,      // ✅ YOUR field
+        subcategeory: updatedBook.subcategeory, // ✅ YOUR field
+        selltype: updatedBook.selltype,
+        soldstatus: updatedBook.soldstatus,
+        // ✅ COMPLETE USER DETAILS
+        userFullName: updatedBook.user?.fullname || "-",
+        userEmail: updatedBook.user?.email || "-",
+        userMobile: updatedBook.user?.mobileNumber || "-",
+        userId: updatedBook.user?._id || "-",
       }
     });
   } catch (error) {
@@ -178,37 +181,6 @@ const updateStatus = async (req, res) => {
   }
 };
 
-const getAllOrderedBooks = async (req, res) => {
-  try {
-    const orderedBooks = await OrderedBooks.find()
-      .populate({
-        path: "buyerid",
-        select: "fullname email mobileNumber",
-      })
-      .populate({
-        path: "bookid",
-        select: "name description price updatedPrice condition user",
-        populate: {
-          path: "user",
-          select: "fullname email mobileNumber",
-        },
-      })
-      .sort({ date_added: -1 });
-
-    const formattedOrders = orderedBooks.map((order) => ({
-      orderId: order._id,
-      buyer: order.buyerid,
-      book: order.bookid,
-      seller: order.bookid.user,
-      review: order.review || "",
-    }));
-
-    res.status(200).json({ orderedBooks: formattedOrders });
-  } catch (error) {
-    console.error("Error in getAllOrderedBooksDetailed:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
 
 module.exports = {
   getAllOrders,
