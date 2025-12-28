@@ -186,6 +186,5 @@ module.exports = {
   getAllOrders,
   getAllBooks,
   updateStatus,
-  getAllOrderedBooks,
   updatePrintStatus,
 };
