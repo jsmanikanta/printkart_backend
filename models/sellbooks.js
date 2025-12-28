@@ -134,7 +134,7 @@ const sellbooksschema = new mongoose.Schema({
 
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: "User",
   },
   status: {
     type: String,
@@ -146,7 +146,7 @@ const sellbooksschema = new mongoose.Schema({
   },
   soldstatus: {
     type: String,
-    enum: ["Instock", "Soldout", "Orderd"],
+    enum: ["Instock", "Soldout", "Orderd","Rejected"],
     default: "Instock",
   },
   date_added: { type: Date, default: Date.now },
