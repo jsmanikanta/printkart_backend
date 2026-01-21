@@ -131,11 +131,6 @@ const sellbooksschema = new mongoose.Schema({
     enum: ["sell", "donate"],
     required: true,
   },
-
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
-  },
   status: {
     type: String,
     enum: ["Pending", "Accepted", "Rejected"],
