@@ -111,7 +111,7 @@ const getAllBooks = async (req, res) => {
       subcategory: book.subcategeory || "-",
       selltype: book.selltype || "-",
       soldstatus: book.soldstatus || "Instock",
-      userFullName: book.user?.name || "-",
+      userFullName: book.user?.fullname || "-",
       userEmail: book.user?.email || "-",
       userMobile: book.user?.mobileNumber || "-",
       userId: book.user?._id || "-",
