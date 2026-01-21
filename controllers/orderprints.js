@@ -1,14 +1,11 @@
-import cloudinary from "cloudinary";
-import streamifier from "streamifier";
-import dotenv from "dotenv";
-import { Resend } from "resend";
-import User from "../models/user.js";
-import Sellbooks from "../models/sellbooks.js";
-
-dotenv.config();
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
+const { Resend } = require("resend");
+const User = require("../models/user");
+const Sellbooks = require("../models/sellbooks");
 
 // Cloudinary config
-cloudinary.v2.config({
+cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
   api_secret: process.env.API_SECRET,
@@ -20,7 +17,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Upload buffer to Cloudinary
 const uploadToCloudinary = async (buffer, folder) => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.v2.uploader.upload_stream(
+    const stream = cloudinary.uploader.upload_stream(
       { folder, resource_type: "image" },
       (error, result) => (error ? reject(error) : resolve(result))
     );
@@ -28,7 +25,7 @@ const uploadToCloudinary = async (buffer, folder) => {
   });
 };
 
-export const SellBook = async (req, res) => {
+const Sellbook = async (req, res) => {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -51,14 +48,13 @@ export const SellBook = async (req, res) => {
       return res.status(400).json({ message: "Required fields missing" });
     }
 
-    if (!req.files?.image?.[0]) {
+    if (!req.files?.image) {
       return res.status(400).json({ message: "Book image is required" });
     }
 
     // Upload image
-    const imageFile = req.files.image[0];
     const uploadedImage = await uploadToCloudinary(
-      imageFile.buffer,
+      req.files.image.data,
       "sellbooks"
     );
 
@@ -77,10 +73,12 @@ export const SellBook = async (req, res) => {
       location,
       selltype,
       condition,
-      user: userId,
+      user: userId, // ✅ correct reference
     });
 
     await newBook.save();
+
+    /* ================= ADMIN EMAIL ================= */
     const adminEmailHtml = `
       <h2>📚 New Book Listed on MyBookHub</h2>
 
@@ -89,11 +87,12 @@ export const SellBook = async (req, res) => {
         <li><b>Name:</b> ${user.fullname}</li>
         <li><b>Email:</b> ${user.email}</li>
         <li><b>Mobile:</b> ${user.mobileNumber}</li>
+        <li><b>User ID:</b> ${user._id}</li>
       </ul>
 
       <h3>📘 Book Details</h3>
       <ul>
-        <li><b>Book Name:</b> ${newBook.name}</li>
+        <li><b>Name:</b> ${newBook.name}</li>
         <li><b>Category:</b> ${newBook.categeory}</li>
         <li><b>Sub Category:</b> ${newBook.subcategeory || "N/A"}</li>
         <li><b>Description:</b> ${newBook.description}</li>
@@ -102,13 +101,11 @@ export const SellBook = async (req, res) => {
         <li><b>Location:</b> ${newBook.location}</li>
         <li><b>Price:</b> ₹${newBook.price}</li>
         <li><b>Status:</b> ${newBook.status}</li>
-        <li><b>Stock Status:</b> ${newBook.soldstatus}</li>
+        <li><b>Stock:</b> ${newBook.soldstatus}</li>
         <li><b>Listed On:</b> ${newBook.date_added.toLocaleString()}</li>
       </ul>
 
-      <p>
-        🖼️ <a href="${newBook.image}" target="_blank">View Book Image</a>
-      </p>
+      <p>🖼️ <a href="${newBook.image}" target="_blank">View Book Image</a></p>
     `;
 
     await resend.emails.send({
@@ -119,11 +116,15 @@ export const SellBook = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: "Book listed successfully",
+      message: "Book added successfully",
       book: newBook,
     });
   } catch (error) {
-    console.error("Error listing book:", error);
+    console.error("Error adding book:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
+};
+
+module.exports = {
+  Sellbook,
 };
