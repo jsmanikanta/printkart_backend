@@ -149,6 +149,11 @@ const sellbooksschema = new mongoose.Schema({
     enum: ["Instock", "Soldout", "Orderd"],
     default: "Instock",
   },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user",
+    required: true,
+  },
   date_added: { type: Date, default: Date.now },
 });
 
