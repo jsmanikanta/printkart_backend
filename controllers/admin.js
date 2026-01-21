@@ -164,11 +164,10 @@ const updateStatus = async (req, res) => {
         price: updatedBook.price,
         updatedPrice: updatedBook.updatedPrice,
         condition: updatedBook.condition,
-        categeory: updatedBook.categeory,      // ✅ YOUR field
-        subcategeory: updatedBook.subcategeory, // ✅ YOUR field
+        categeory: updatedBook.categeory, 
+        subcategeory: updatedBook.subcategeory, 
         selltype: updatedBook.selltype,
         soldstatus: updatedBook.soldstatus,
-        // ✅ COMPLETE USER DETAILS
         userFullName: updatedBook.user?.fullname || "-",
         userEmail: updatedBook.user?.email || "-",
         userMobile: updatedBook.user?.mobileNumber || "-",
@@ -184,7 +183,7 @@ const updateStatus = async (req, res) => {
 
 module.exports = {
   getAllOrders,
+  updatePrintStatus,
   getAllBooks,
   updateStatus,
-  updatePrintStatus,
 };
