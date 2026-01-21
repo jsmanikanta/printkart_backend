@@ -92,9 +92,10 @@ const getAllBooks = async (req, res) => {
     const books = await Sellbooks.find()
       .populate({
         path: "user",
-        select: "fullname email mobileNumber"  // ✅ Matches your model ref: "user"
+        select: "fullname email mobileNumber",
       })
-      .sort({ date_added: -1 });
+      .sort({ date_added: -1 })
+      .lean();
 
     const formattedBooks = books.map((book) => ({
       _id: book._id,
@@ -106,12 +107,11 @@ const getAllBooks = async (req, res) => {
       condition: book.condition || "-",
       description: book.description || "-",
       location: book.location || "-",
-      category: book.categeory || "-",        // ✅ YOUR model field
-      subcategory: book.subcategeory || "-",  // ✅ YOUR model field  
+      category: book.categeory || "-",
+      subcategory: book.subcategeory || "-",
       selltype: book.selltype || "-",
       soldstatus: book.soldstatus || "Instock",
-      // ✅ USER DETAILS - populated from your model
-      userFullName: book.user?.fullname || "-",
+      userFullName: book.user?.name || "-",
       userEmail: book.user?.email || "-",
       userMobile: book.user?.mobileNumber || "-",
       userId: book.user?._id || "-",
@@ -121,7 +121,7 @@ const getAllBooks = async (req, res) => {
     res.status(200).json({
       success: true,
       count: formattedBooks.length,
-      books: formattedBooks
+      books: formattedBooks,
     });
   } catch (error) {
     console.error("Admin books error:", error);
