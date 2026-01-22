@@ -32,7 +32,6 @@ const sellbooksschema = new mongoose.Schema({
   "College & University Books",
   "Competitive Exam Books",
   "Fictional Books",
-  "Previous Year Papers",
   "Non-Fiction Books",
   "others"
 ];
