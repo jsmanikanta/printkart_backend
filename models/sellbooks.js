@@ -39,7 +39,7 @@ const sellbooksschema = new mongoose.Schema({
   },
   subcategeory: {
     type: String,
-    "School Books": [
+    "School Books (class 1-12)": [
       "NCERT Books",
       "State Board Books",
       "CBSE Books",
