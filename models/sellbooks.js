@@ -98,7 +98,7 @@ const sellbooksschema = new mongoose.Schema({
   "Thriller",
   "Action & Adventure",
   "Young adult",
-  "Historical Fiction"
+  "Historical Fiction",
   "Others"
 ],
     "Non-Fiction Books": [
