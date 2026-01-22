@@ -34,7 +34,7 @@ const sellbooksschema = new mongoose.Schema({
   "Fictional Books",
   "Non-Fiction Books",
   "others"
-];
+],
     required: true,
   },
   subcategeory: {
