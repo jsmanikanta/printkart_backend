@@ -47,6 +47,7 @@ const sellbooksschema = new mongoose.Schema({
       "English Medium Textbooks",
       "Telugu Medium Textbooks",
       "Hindi Medium Textbooks",
+      "Others"
     ],
     "College & University Books": [
   "B.A",
@@ -98,6 +99,7 @@ const sellbooksschema = new mongoose.Schema({
   "Action & Adventure",
   "Young adult",
   "Historical Fiction"
+  "Others"
 ],
     "Non-Fiction Books": [
   "Self-Help",
@@ -114,7 +116,8 @@ const sellbooksschema = new mongoose.Schema({
   "Sports",
   "Transportation & Travel",
   "Dictionary",
-  "Encyclopedia"
+  "Encyclopedia",
+  "Others"
 ],
   },
   selltype: {
