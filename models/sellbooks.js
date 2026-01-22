@@ -28,7 +28,7 @@ const sellbooksschema = new mongoose.Schema({
   categeory: {
     type: String,
     enum: [
-  "School Books",
+  "School Books (class 1-12)",
   "College & University Books",
   "Competitive Exam Books",
   "Fictional Books",
