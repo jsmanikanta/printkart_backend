@@ -47,7 +47,7 @@ const Sellbook = async (req, res) => {
       condition,
     } = req.body;
 
-    if (!name || !price || !categeory || !description || !location) {
+    if (!name || !price || !categeory || !location) {
       return res.status(400).json({ message: "Required fields missing" });
     }
 
