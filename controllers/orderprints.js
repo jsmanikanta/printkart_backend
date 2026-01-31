@@ -29,10 +29,7 @@ const uploadToCloudinary = async (buffer, folderName) => {
 
 export const orderPrint = async (req, res) => {
   try {
-    // Debug: log files to see what's arriving
     console.log("DEBUG req.files:", Object.keys(req.files || {}));
-    // files will be like: { file: [File], transctionid: [File] } if multer configured correctly
-
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
@@ -54,8 +51,7 @@ export const orderPrint = async (req, res) => {
       description,
       binding,
       copies,
-      payment, // expected "UPI" or "payondelivery"
-      // NOTE: do NOT rely on req.body.transctionid for file URL
+      payment, 
     } = req.body;
 
     // validations
@@ -94,8 +90,6 @@ export const orderPrint = async (req, res) => {
       if (!uploadedTransaction?.secure_url)
         return res.status(500).json({ message: "Failed to upload transaction screenshot" });
     }
-
-    // Save order
     const newOrder = new Prints({
       name,
       mobile,
@@ -113,14 +107,11 @@ export const orderPrint = async (req, res) => {
       rollno,
       description,
       payment,
-      // store the uploaded image URL (empty string if not provided)
       transctionid: uploadedTransaction ? uploadedTransaction.secure_url : "",
       userid: userId,
     });
 
     await newOrder.save();
-
-    // Email to Admin (use uploadedTransaction URL, not req.body.transctionid)
     const adminEmailHtml = `
       <h2>New print order placed by ${newOrder.name}</h2>
       <p>From the account ${user.fullname}</p>
