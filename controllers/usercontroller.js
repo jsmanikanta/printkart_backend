@@ -55,9 +55,9 @@ export const Register = async (req, res) => {
         `,
       });
 
-      console.log("✅ Welcome email sent to:", newUser.email);
+      console.log("Welcome email sent to:", newUser.email);
     } catch (emailError) {
-      console.error("❌ Failed to send welcome email:", emailError);
+      console.error("Failed to send welcome email:", emailError);
     }
 
     res.status(201).json({
@@ -120,13 +120,12 @@ export function setupUploadsStatic(app) {
 
 export const getPrintsById = async (req, res) => {
   try {
-    const userId = req.userId; // Ensure a middleware is setting this, e.g., verifyToken
+    const userId = req.userId; 
 
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
-    // Fetch user info
     const user = await User.findById(userId).select(
       "fullname mobileNumber email"
     );
@@ -141,7 +140,6 @@ export const getPrintsById = async (req, res) => {
       )
       .sort({ orderDate: -1 });
 
-    // Format response
     return res.status(200).json({
       user: {
         fullname: user.fullname,
@@ -173,90 +171,5 @@ export const getPrintsById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching user data:", error);
     return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const getBooksSoldById = async (req, res) => {
-  try {
-    const userId = req.userId;
-    if (!userId) {
-      return res.status(400).json({ error: "User ID missing from token" });
-    }
-
-    const user = await User.findById(userId).select(
-      "fullname mobileNumber email"
-    );
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const books = await Sellbooks.find({ user: userId })
-      .select(
-        "name image price condition description location categeory selltype status updatedPrice soldstatus"
-      )
-      .sort({ orderDate: -1 });
-
-    res.status(200).json({
-      user: {
-        fullname: user.fullname,
-        mobileNumber: user.mobileNumber,
-        email: user.email,
-      },
-      books: books.map((book) => ({
-        id: book._id,
-        name: book.name,
-        image: book.image
-          ? `${process.env.BASE_URL}/uploads/${book.image.replace(
-              /^uploads[\\/]/,
-              ""
-            )}`
-          : null,
-        price: book.price,
-        condition: book.condition,
-        description: book.description,
-        location: book.location,
-        category: book.categeory,
-        sellType: book.selltype,
-        soldstatus: book.soldstatus,
-        status: book.status,
-        updatedPrice: book.updatedPrice || null,
-      })),
-    });
-  } catch (error) {
-    console.error("Error fetching user data:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-import OrderedBooks from "../models/orderedbooks.js";
-
-export const getUserBoughtBooks = async (req, res) => {
-  try {
-    if (!req.userId) {
-      return res.status(401).json({ message: "User not logged in" });
-    }
-    const userId = req.userId;
-    const orders = await OrderedBooks.find({ buyerid: userId })
-      .populate({
-        path: "bookid",
-        select: "name description price updatedPrice condition image user",
-        populate: { path: "user", select: "fullname" }, // populate seller info from 'user' field
-      })
-      .sort({ createdAt: -1 });
-
-    const boughtBooks = orders.map((order) => ({
-      orderId: order._id,
-      book: {
-        ...order.bookid._doc,
-        sellerName: order.bookid.user?.fullname || "Unknown Seller",
-        image: order.bookid.image || null,
-      },
-      review: order.review || "",
-    }));
-
-    return res.status(200).json({ boughtBooks });
-  } catch (error) {
-    console.error("Error in getUserBoughtBooks:", error);
-    return res.status(500).json({ message: "Internal server error" });
   }
 };
