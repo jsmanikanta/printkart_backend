@@ -60,8 +60,6 @@ const updatePrintStatus = async (req, res) => {
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: "Invalid status value" });
   }
-
-  // Validate orderId format
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
     return res.status(400).json({ error: "Invalid orderId format" });
   }
@@ -148,8 +146,6 @@ const updateStatus = async (req, res) => {
     }
 
     await book.save();
-
-    // ✅ Return WITH populated user details
     const updatedBook = await Sellbooks.findById(bookId)
       .populate("user", "fullname email mobileNumber");
 
