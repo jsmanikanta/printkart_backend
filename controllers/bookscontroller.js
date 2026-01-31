@@ -76,8 +76,6 @@ const Sellbook = async (req, res) => {
     });
 
     await newBook.save();
-
-    // ADMIN EMAIL
     const adminEmailHtml = `
       <h2>📘 New Book Listed</h2>
 
