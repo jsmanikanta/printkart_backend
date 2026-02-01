@@ -11,8 +11,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 router.post("/register", usercontrol.Register);
 router.post("/login", usercontrol.login);
 router.get("/printorders", verifyToken, usercontrol.getPrintsById);
-router.get("/soldbooks", verifyToken, usercontrol.getBooksSoldById);
-router.get("/broughtbooks", verifyToken, usercontrol.getUserBoughtBooks);
 router.post("/reset-password", forgot.resetPasswordWithoutOTP);
 
 module.exports = router;

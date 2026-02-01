@@ -1,4 +1,3 @@
-// models/coupon.js (or Couponstatus.js)
 const mongoose = require("mongoose");
 
 const couponStatusSchema = new mongoose.Schema({
