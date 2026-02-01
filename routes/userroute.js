@@ -13,5 +13,6 @@ router.post("/login", usercontrol.login);
 router.get("/printorders", verifyToken, usercontrol.getPrintsById);
 router.post("/reset-password", forgot.resetPasswordWithoutOTP);
 router.get("/profile", verifyToken, usercontrol.getProfile);
+router.patch("/profile/:userId/update",verifyToken,usercontrol.updateProfile);
 
 module.exports = router;

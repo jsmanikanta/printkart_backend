@@ -214,3 +214,64 @@ export const getProfile = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  const userId = req.userId;
+  const updates = req.body;
+
+  // Allow any of these fields (single or multiple)
+  const allowedFields = [
+    'fullname', 'mobileNumber', 'email', 'birthday', 
+    'location', 'college', 'year', 'branch', 'rollno'
+  ];
+
+  // Filter only allowed updates
+  const validUpdates = {};
+  for (let key of allowedFields) {
+    if (updates[key] !== undefined) {
+      validUpdates[key] = updates[key];
+    }
+  }
+
+  if (Object.keys(validUpdates).length === 0) {
+    return res.status(400).json({ error: "No valid fields provided" });
+  }
+
+  try {
+    // Check unique fields BEFORE update (exclude current user)
+    const uniqueCheck = {};
+    if (validUpdates.fullname) uniqueCheck.fullname = validUpdates.fullname;
+    if (validUpdates.mobileNumber) uniqueCheck.mobileNumber = validUpdates.mobileNumber;
+    if (validUpdates.email) uniqueCheck.email = validUpdates.email;
+
+    if (Object.keys(uniqueCheck).length > 0) {
+      const existing = await User.findOne({
+        $or: Object.entries(uniqueCheck).map(([key, value]) => ({ [key]: value })),
+        _id: { $ne: userId }
+      });
+      
+      if (existing) {
+        return res.status(400).json({ error: "Field already taken" });
+      }
+    }
+    
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: validUpdates },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully!",
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ error: "Update failed" });
+  }
+};

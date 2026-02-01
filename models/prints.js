@@ -33,7 +33,6 @@ const printSchema = new mongoose.Schema({
       "Out for delivery",
       "Delivered",
       "Cancelled",
-     
     ],
     default: "Order placed",
   },
