@@ -7,7 +7,7 @@ const printSchema = new mongoose.Schema({
   originalprice: { type: Number, required: true },
   discountprice: { type: Number },
   color: { type: String, enum: ["b/w", "colour", "both"], required: true },
-  sides: { type: String, enum: ["1", "2"], required: true },
+  sides: { type: String, enum: ["1", "2","2 per side","4 per side"], required: true },
   binding: {
     type: String,
     enum: ["none", "spiral", "stick", "soft", "book"],

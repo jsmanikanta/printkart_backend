@@ -18,7 +18,23 @@ const secretkey = process.env.SECRETKEY;
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const Register = async (req, res) => {
-  const { fullname, mobileNumber, email, password } = req.body;
+  const {
+    fullname,
+    mobileNumber,
+    email,
+    password,
+    birthday,
+    location,
+    usertype,
+    college,
+    year,
+    branch,
+    rollno,
+  } = req.body;
+
+  if (!fullname || !mobileNumber || !email || !password) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
 
   try {
     const number = await User.findOne({ mobileNumber });
@@ -33,6 +49,13 @@ export const Register = async (req, res) => {
       fullname,
       mobileNumber,
       email,
+      birthday,
+      location,
+      usertype,
+      college,
+      year,
+      branch,
+      rollno,
       password: hashedPassword,
     });
     await newUser.save();
@@ -44,13 +67,13 @@ export const Register = async (req, res) => {
         subject: `${newUser.fullname}! Welcome to MyBookHub 🎉`,
         html: `
           <h2>Hello ${newUser.fullname},</h2>
-          <p>Welcome to <b>MyBookHub</b>! We’re thrilled to have you on board.</p>
+          <p>Welcome to <b>MyBookHub</b>! We're thrilled to have you on board.</p>
           <ul>
-            <li>📚 Buy or sell books easily.</li>
-            <li>🖨️ Order quick, affordable printouts anytime.</li>
+            <li>Buy or sell books easily.</li>
+            <li>Order quick, affordable printouts anytime.</li>
           </ul>
           <p>Your journey for seamless study materials and secondhand books starts here.</p>
-          <p>If you have any questions, reply to this email — we’re always happy to help!</p>
+          <p>If you have any questions, reply to this email — we're always happy to help!</p>
           <p>Happy reading,<br/><b>The MyBookHub Team</b></p>
         `,
       });
@@ -59,7 +82,6 @@ export const Register = async (req, res) => {
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
     }
-
     res.status(201).json({
       message: "User registered successfully!",
       user: newUser,
@@ -120,23 +142,22 @@ export function setupUploadsStatic(app) {
 
 export const getPrintsById = async (req, res) => {
   try {
-    const userId = req.userId; 
+    const userId = req.userId;
 
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
     const user = await User.findById(userId).select(
-      "fullname mobileNumber email"
+      "fullname mobileNumber email",
     );
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Fetch the print orders for this user
     const orders = await Prints.find({ userid: userId })
       .select(
-        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate status"
+        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate status",
       )
       .sort({ orderDate: -1 });
 
@@ -168,6 +189,26 @@ export const getPrintsById = async (req, res) => {
         status: order.status,
       })),
     });
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+export const getProfile = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "User ID missing from token" });
+    }
+
+    const user = await User.findById(userId).select(
+      "fullname mobileNumber email birthday location usertype college year branch rollno",
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    return res.status(200).json(user);
   } catch (error) {
     console.error("Error fetching user data:", error);
     return res.status(500).json({ error: "Internal server error" });

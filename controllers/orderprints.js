@@ -7,7 +7,6 @@ import cloudinary from "cloudinary";
 import streamifier from "streamifier";
 dotenv.config();
 
-// Configure Cloudinary
 cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
@@ -29,7 +28,6 @@ const uploadToCloudinary = async (buffer, folderName) => {
 
 export const orderPrint = async (req, res) => {
   try {
-    console.log("DEBUG req.files:", Object.keys(req.files || {}));
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
@@ -64,18 +62,15 @@ export const orderPrint = async (req, res) => {
     if (!payment)
       return res.status(400).json({ message: "Payment method is required" });
 
-    // SERVER-SIDE file size limits (10 MB)
     const MAX_SIZE = 10 * 1024 * 1024;
     const pdfFile = req.files.file[0];
     if (pdfFile.size > MAX_SIZE)
       return res.status(400).json({ message: "PDF file size must be less than 10MB" });
 
-    // Upload print file
     const uploadedPrint = await uploadToCloudinary(pdfFile.buffer, "PrintOrders");
     if (!uploadedPrint?.secure_url)
       return res.status(500).json({ message: "Failed to upload print file" });
 
-    // Process transaction screenshot (for UPI)
     let uploadedTransaction = null;
     if (payment === "UPI") {
       if (!req.files?.transctionid?.[0]) {
@@ -131,10 +126,10 @@ export const orderPrint = async (req, res) => {
         <li><b>Payment Mode:</b> ${newOrder.payment}</li>
       </ul>
       <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
-      <p>📄 <a href="${uploadedPrint.secure_url}" target="_blank">View Print File</a></p>
+      <p><a href="${uploadedPrint.secure_url}" target="_blank">View Print File</a></p>
       ${
         uploadedTransaction?.secure_url
-          ? `<p>💳 <a href="${uploadedTransaction.secure_url}" target="_blank">View Transaction Screenshot</a></p>`
+          ? `<p><a href="${uploadedTransaction.secure_url}" target="_blank">View Transaction Screenshot</a></p>`
           : ""
       }
     `;
@@ -142,7 +137,7 @@ export const orderPrint = async (req, res) => {
     await resend.emails.send({
       from: "MyBookHub Admin <onboarding@resend.dev>",
       to: "printkart0001@gmail.com",
-      subject: "🖨️ New Print Order Placed - MyBookHub",
+      subject: "New Print Order Placed - MyBookHub",
       html: adminEmailHtml,
     });
 
@@ -166,11 +161,10 @@ export const orderPrint = async (req, res) => {
     await resend.emails.send({
       from: "MyBookHub Orders <onboarding@resend.dev>",
       to: user.email,
-      subject: "📦 Your Print Order Confirmation - MyBookHub",
+      subject: "Your Print Order Confirmation - MyBookHub",
       html: userEmailHtml,
     });
 
-    // Final response
     res.status(201).json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);

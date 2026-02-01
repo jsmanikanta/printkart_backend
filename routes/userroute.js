@@ -12,5 +12,6 @@ router.post("/register", usercontrol.Register);
 router.post("/login", usercontrol.login);
 router.get("/printorders", verifyToken, usercontrol.getPrintsById);
 router.post("/reset-password", forgot.resetPasswordWithoutOTP);
+router.get("/profile", verifyToken, usercontrol.getProfile);
 
 module.exports = router;
