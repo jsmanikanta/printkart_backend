@@ -22,9 +22,6 @@ const userschema = new mongoose.Schema({
   birthday: {
     type: Date,
   },
-  location: {
-    type: String,
-  },
   usertype: {
     type: String,
     enum: ["vendor", "user"],
@@ -33,13 +30,13 @@ const userschema = new mongoose.Schema({
   college: {
     type: String,
   },
-  year:{
+  year: {
     type: String,
   },
-  branch:{
+  branch: {
     type: String,
   },
-  rollno:{
+  rollno: {
     type: String,
   },
 });

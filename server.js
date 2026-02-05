@@ -25,6 +25,7 @@ const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
 const papers = require("./routes/papersroute");
 const coupon=require("./routes/couponroute");
+const location=require("./routes/locationroute");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/orders", orders);
@@ -39,6 +40,7 @@ app.use("/books", books);
 app.use("/admin", admin);
 app.use("/anits",papers);
 app.use("/coupon",coupon);
+app.use("/locations",location);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

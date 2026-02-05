@@ -142,6 +142,10 @@ const sellbooksschema = new mongoose.Schema({
     ref: "user",
     required: true,
   },
+  soldcount:{
+    type:Number,
+    default:0,
+  },
   date_added: { type: Date, default: Date.now },
 });
 

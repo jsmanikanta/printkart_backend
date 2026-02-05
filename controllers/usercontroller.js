@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import Prints from "../models/prints.js";
+import Sellbooks from "../models/sellbooks.js";
 import User from "../models/user.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -64,7 +65,7 @@ export const Register = async (req, res) => {
       await resend.emails.send({
         from: "MyBookHub <onboarding@resend.dev>",
         to: newUser.email,
-        subject: `${newUser.fullname}! Welcome to MyBookHub 🎉`,
+        subject: `${newUser.fullname}! Welcome to MyBookHub `,
         html: `
           <h2>Hello ${newUser.fullname},</h2>
           <p>Welcome to <b>MyBookHub</b>! We're thrilled to have you on board.</p>
@@ -140,14 +141,13 @@ export function setupUploadsStatic(app) {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 }
 
+
 export const getPrintsById = async (req, res) => {
   try {
     const userId = req.userId;
-
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
-
     const user = await User.findById(userId).select(
       "fullname mobileNumber email",
     );
@@ -194,6 +194,52 @@ export const getPrintsById = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getBooksById = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "User ID missing from token" });
+    }
+    const user = await User.findById(userId).select(
+      "fullname mobileNumber email",
+    );
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const books = await Sellbooks.find({ userid: userId })
+      .select(
+        "name image price condition description location categeory subcategeory selltype status updatedprice soldstatus",
+      )
+      .sort({ date_added: -1 });
+    return res.status(200).json({
+      user: {
+        fullname: user.fullname,
+        mobileNumber: user.mobileNumber,
+        email: user.email,
+      },
+      books: books.map((book) => ({
+        id: book._id,
+        name: book.name,
+        price: book.price,
+        condition: book.condition,
+        description: book.description,
+        location: book.location,
+        categeory: book.categeory,
+        subcategeory: book.subcategeory,
+        selltype: book.selltype,
+        status: book.status,
+        updatedprice: book.updatedPrice,
+        soldstatus: book.soldstatus,
+        soldcount:book.soldcount,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const getProfile = async (req, res) => {
   try {
     const userId = req.userId;
@@ -204,7 +250,7 @@ export const getProfile = async (req, res) => {
     const user = await User.findById(userId).select(
       "fullname mobileNumber email birthday location usertype college year branch rollno",
     );
-    
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -219,13 +265,18 @@ export const updateProfile = async (req, res) => {
   const userId = req.userId;
   const updates = req.body;
 
-  // Allow any of these fields (single or multiple)
   const allowedFields = [
-    'fullname', 'mobileNumber', 'email', 'birthday', 
-    'location', 'college', 'year', 'branch', 'rollno'
+    "fullname",
+    "mobileNumber",
+    "email",
+    "birthday",
+    "location",
+    "college",
+    "year",
+    "branch",
+    "rollno",
   ];
 
-  // Filter only allowed updates
   const validUpdates = {};
   for (let key of allowedFields) {
     if (updates[key] !== undefined) {
@@ -238,28 +289,30 @@ export const updateProfile = async (req, res) => {
   }
 
   try {
-    // Check unique fields BEFORE update (exclude current user)
     const uniqueCheck = {};
     if (validUpdates.fullname) uniqueCheck.fullname = validUpdates.fullname;
-    if (validUpdates.mobileNumber) uniqueCheck.mobileNumber = validUpdates.mobileNumber;
+    if (validUpdates.mobileNumber)
+      uniqueCheck.mobileNumber = validUpdates.mobileNumber;
     if (validUpdates.email) uniqueCheck.email = validUpdates.email;
 
     if (Object.keys(uniqueCheck).length > 0) {
       const existing = await User.findOne({
-        $or: Object.entries(uniqueCheck).map(([key, value]) => ({ [key]: value })),
-        _id: { $ne: userId }
+        $or: Object.entries(uniqueCheck).map(([key, value]) => ({
+          [key]: value,
+        })),
+        _id: { $ne: userId },
       });
-      
+
       if (existing) {
         return res.status(400).json({ error: "Field already taken" });
       }
     }
-    
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: validUpdates },
-      { new: true, runValidators: true }
-    ).select('-password');
+      { new: true, runValidators: true },
+    ).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
@@ -267,11 +320,11 @@ export const updateProfile = async (req, res) => {
 
     res.status(200).json({
       message: "Profile updated successfully!",
-      user: updatedUser
+      user: updatedUser,
     });
-
   } catch (error) {
     console.error("Update error:", error);
     res.status(500).json({ error: "Update failed" });
   }
 };
+
