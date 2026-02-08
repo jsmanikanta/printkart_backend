@@ -51,7 +51,7 @@ const verifyCoupon = async (req, res) => {
       return res.status(400).json({
         success: false,
         status: "invalid",
-        error: "Coupon usage limit reached",
+        error: "Coupon expired",
       });
     }
 
@@ -139,3 +139,4 @@ const verifyCoupon = async (req, res) => {
 };
 
 module.exports = { verifyCoupon };
+
