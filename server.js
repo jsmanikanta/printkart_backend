@@ -30,7 +30,6 @@ const location=require("./routes/locationroute");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/orders", orders);
 
-// Mount body parsers AFTER file upload routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

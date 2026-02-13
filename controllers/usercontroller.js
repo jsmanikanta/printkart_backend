@@ -270,7 +270,6 @@ export const updateProfile = async (req, res) => {
     "mobileNumber",
     "email",
     "birthday",
-    "location",
     "college",
     "year",
     "branch",
@@ -278,10 +277,8 @@ export const updateProfile = async (req, res) => {
   ];
 
   const validUpdates = {};
-  for (let key of allowedFields) {
-    if (updates[key] !== undefined) {
-      validUpdates[key] = updates[key];
-    }
+  for (const key of allowedFields) {
+    if (updates[key] !== undefined) validUpdates[key] = updates[key];
   }
 
   if (Object.keys(validUpdates).length === 0) {
@@ -289,17 +286,15 @@ export const updateProfile = async (req, res) => {
   }
 
   try {
-    const uniqueCheck = {};
-    if (validUpdates.fullname) uniqueCheck.fullname = validUpdates.fullname;
-    if (validUpdates.mobileNumber)
-      uniqueCheck.mobileNumber = validUpdates.mobileNumber;
-    if (validUpdates.email) uniqueCheck.email = validUpdates.email;
+    // check uniqueness for specific fields (if they are being updated)
+    const orConditions = [];
+    if (validUpdates.fullname) orConditions.push({ fullname: validUpdates.fullname });
+    if (validUpdates.mobileNumber) orConditions.push({ mobileNumber: validUpdates.mobileNumber });
+    if (validUpdates.email) orConditions.push({ email: validUpdates.email });
 
-    if (Object.keys(uniqueCheck).length > 0) {
+    if (orConditions.length > 0) {
       const existing = await User.findOne({
-        $or: Object.entries(uniqueCheck).map(([key, value]) => ({
-          [key]: value,
-        })),
+        $or: orConditions,
         _id: { $ne: userId },
       });
 
@@ -311,20 +306,19 @@ export const updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: validUpdates },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true }
     ).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Profile updated successfully!",
       user: updatedUser,
     });
   } catch (error) {
     console.error("Update error:", error);
-    res.status(500).json({ error: "Update failed" });
+    return res.status(500).json({ error: "Update failed" });
   }
 };
-
