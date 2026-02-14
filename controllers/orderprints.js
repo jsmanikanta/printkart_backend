@@ -20,7 +20,7 @@ const uploadToCloudinary = async (buffer, folderName) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.v2.uploader.upload_stream(
       { folder: folderName, resource_type: "auto" },
-      (error, result) => (error ? reject(error) : resolve(result))
+      (error, result) => (error ? reject(error) : resolve(result)),
     );
     streamifier.createReadStream(buffer).pipe(stream);
   });
@@ -49,7 +49,7 @@ export const orderPrint = async (req, res) => {
       description,
       binding,
       copies,
-      payment, 
+      payment,
     } = req.body;
 
     // validations
@@ -65,25 +65,39 @@ export const orderPrint = async (req, res) => {
     const MAX_SIZE = 10 * 1024 * 1024;
     const pdfFile = req.files.file[0];
     if (pdfFile.size > MAX_SIZE)
-      return res.status(400).json({ message: "PDF file size must be less than 10MB" });
+      return res
+        .status(400)
+        .json({ message: "PDF file size must be less than 10MB" });
 
-    const uploadedPrint = await uploadToCloudinary(pdfFile.buffer, "PrintOrders");
+    const uploadedPrint = await uploadToCloudinary(
+      pdfFile.buffer,
+      "PrintOrders",
+    );
     if (!uploadedPrint?.secure_url)
       return res.status(500).json({ message: "Failed to upload print file" });
 
     let uploadedTransaction = null;
     if (payment === "UPI") {
       if (!req.files?.transctionid?.[0]) {
-        return res.status(400).json({ message: "Transaction screenshot required for UPI" });
+        return res
+          .status(400)
+          .json({ message: "Transaction screenshot required for UPI" });
       }
       const trxFile = req.files.transctionid[0];
       if (trxFile.size > MAX_SIZE) {
-        return res.status(400).json({ message: "Transaction screenshot must be less than 10MB" });
+        return res
+          .status(400)
+          .json({ message: "Transaction screenshot must be less than 10MB" });
       }
 
-      uploadedTransaction = await uploadToCloudinary(trxFile.buffer, "Transactions");
+      uploadedTransaction = await uploadToCloudinary(
+        trxFile.buffer,
+        "Transactions",
+      );
       if (!uploadedTransaction?.secure_url)
-        return res.status(500).json({ message: "Failed to upload transaction screenshot" });
+        return res
+          .status(500)
+          .json({ message: "Failed to upload transaction screenshot" });
     }
     const newOrder = new Prints({
       name,
@@ -135,37 +149,49 @@ export const orderPrint = async (req, res) => {
     `;
 
     await resend.emails.send({
-      from: "MyBookHub Admin <onboarding@resend.dev>",
+      from: "Admin <admin@mybookhub.store>",
       to: "printkart0001@gmail.com",
       subject: "New Print Order Placed - MyBookHub",
       html: adminEmailHtml,
     });
 
     // Email to user
-    const userEmailHtml = `
+    try {
+      await resend.emails.send({
+        from: "MyBookHub <admin@mybookhub.store>",
+        to: user.email,
+        subject: "Thank You for Your Print Order",
+        html: `
       <h2>Hello ${user.fullname},</h2>
-      <p>Thank you for placing a print order with <b>MyBookHub</b>!</p>
-      <p>Your order is being processed.</p>
+
+      <p>Thank you for placing your print order with <b>MyBookHub</b>! 🖨️</p>
+
+      <p>We have successfully received your request, and our team is preparing your documents for printing.</p>
+
       <ul>
-        <li><b>Color:</b> ${newOrder.color}</li>
-        <li><b>Sides:</b> ${newOrder.sides}</li>
-        <li><b>Binding:</b> ${newOrder.binding}</li>
-        <li><b>Copies:</b> ${newOrder.copies}</li>
-        <li><b>Offer Price:</b> ₹${newOrder.discountprice}</li>
-        <li><b>Order Date:</b> ${newOrder.orderDate.toDateString()}</li>
+        <li>Affordable pricing</li>
+        <li>Fast processing</li>
+        <li>Quality prints</li>
       </ul>
-      <p>We will notify you when it's ready!</p>
-      <p>Regards,<br/><b>MyBookHub Team</b></p>
-    `;
 
-    await resend.emails.send({
-      from: "MyBookHub Orders <onboarding@resend.dev>",
-      to: user.email,
-      subject: "Your Print Order Confirmation - MyBookHub",
-      html: userEmailHtml,
-    });
+      <p>You will be notified once your print order is ready for pickup or dispatched.</p>
 
-    res.status(201).json({ message: "Order placed successfully", order: newOrder });
+      <p>If you have any questions regarding your order, feel free to reply to this email — we're happy to help!</p>
+
+      <p>Thank you for choosing MyBookHub for your printing needs.</p>
+
+      <p>Best regards,<br/>
+      <b>The MyBookHub Team</b></p>
+    `,
+      });
+
+      console.log("Print order confirmation email sent to:", user.email);
+    } catch (emailError) {
+      console.error("Failed to send print order email:", emailError);
+    }
+    res
+      .status(201)
+      .json({ message: "Order placed successfully", order: newOrder });
   } catch (error) {
     console.error("Error placing order:", error);
     res.status(500).json({ error: "Internal server error" });

@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 dotenv.config();
 import Location from "../models/location.js";
 import User from "../models/user.js";
+import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const addLocation = async (req, res) => {
   const userId = req.userId;

@@ -9,14 +9,13 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Resend } from "resend";
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const secretkey = process.env.SECRETKEY;
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const Register = async (req, res) => {
   const {
@@ -63,7 +62,7 @@ export const Register = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: "MyBookHub <onboarding@resend.dev>",
+        from: "MyBookHub <admin@mybookhub.store>",
         to: newUser.email,
         subject: `${newUser.fullname}! Welcome to MyBookHub `,
         html: `
