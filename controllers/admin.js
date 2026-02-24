@@ -55,7 +55,6 @@ const updatePrintStatus = async (req, res) => {
     "Cancelled"
   ];
 
-  // Validate status
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: "Invalid status value" });
   }

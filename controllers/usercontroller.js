@@ -94,9 +94,11 @@ export const Register = async (req, res) => {
 
 export const login = async (req, res) => {
   const { identifier, password } = req.body;
+
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
+
     let user;
 
     if (emailRegex.test(identifier)) {
@@ -104,23 +106,32 @@ export const login = async (req, res) => {
     } else if (phoneRegex.test(identifier)) {
       user = await User.findOne({ mobileNumber: identifier });
     } else {
-      return res.status(400).json({ error: "Invalid email or phone format" });
+      return res.status(400).json({ success: false, error: "Invalid email or phone format" });
     }
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid username or password" });
+      return res.status(401).json({ success: false, error: "Invalid username or password" });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(401).json({ error: "Invalid username or password" });
+      return res.status(401).json({ success: false, error: "Invalid username or password" });
     }
 
     const token = jwt.sign({ userId: user._id, role: user.role }, secretkey, {
-      expiresIn: "3000s",
+      expiresIn: "3h",
     });
 
-    res.status(200).json({
+    res.cookie("token", token, {
+      domain: ".mybookhub.store",
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // ✅ include token in response too
+    return res.status(200).json({
       success: true,
       token,
       user: {
@@ -132,14 +143,13 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
 };
 
 export function setupUploadsStatic(app) {
   app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 }
-
 
 export const getPrintsById = async (req, res) => {
   try {
@@ -206,9 +216,9 @@ export const getBooksById = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    const books = await Sellbooks.find({ userid: userId })
+    const books = await Sellbooks.find({ user: userId })
       .select(
-        "name image price condition description location categeory subcategeory selltype status updatedprice soldstatus",
+        "name image price condition description location categeory subcategeory selltype status updatedPrice soldstatus",
       )
       .sort({ date_added: -1 });
     return res.status(200).json({
@@ -221,6 +231,7 @@ export const getBooksById = async (req, res) => {
         id: book._id,
         name: book.name,
         price: book.price,
+        image: book.image,
         condition: book.condition,
         description: book.description,
         location: book.location,
@@ -228,9 +239,9 @@ export const getBooksById = async (req, res) => {
         subcategeory: book.subcategeory,
         selltype: book.selltype,
         status: book.status,
-        updatedprice: book.updatedPrice,
+        updatedPrice: book.updatedPrice,
         soldstatus: book.soldstatus,
-        soldcount:book.soldcount,
+        soldcount: book.soldcount,
       })),
     });
   } catch (error) {
@@ -287,8 +298,10 @@ export const updateProfile = async (req, res) => {
   try {
     // check uniqueness for specific fields (if they are being updated)
     const orConditions = [];
-    if (validUpdates.fullname) orConditions.push({ fullname: validUpdates.fullname });
-    if (validUpdates.mobileNumber) orConditions.push({ mobileNumber: validUpdates.mobileNumber });
+    if (validUpdates.fullname)
+      orConditions.push({ fullname: validUpdates.fullname });
+    if (validUpdates.mobileNumber)
+      orConditions.push({ mobileNumber: validUpdates.mobileNumber });
     if (validUpdates.email) orConditions.push({ email: validUpdates.email });
 
     if (orConditions.length > 0) {
@@ -305,7 +318,7 @@ export const updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: validUpdates },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password");
 
     if (!updatedUser) {

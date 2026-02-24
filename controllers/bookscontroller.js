@@ -3,6 +3,7 @@ const streamifier = require("streamifier");
 const { Resend } = require("resend");
 const User = require("../models/user");
 const Sellbooks = require("../models/sellbooks");
+const mongoose=require("mongoose");
 
 // Cloudinary config
 cloudinary.config({
@@ -61,7 +62,6 @@ const Sellbook = async (req, res) => {
       "sellbooks"
     );
 
-    // Save book
     const newBook = new Sellbooks({
       name,
       image: uploadResult.secure_url,
@@ -118,4 +118,84 @@ const Sellbook = async (req, res) => {
   }
 };
 
-module.exports = { Sellbook };
+const getBookById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID",
+      });
+    }
+
+    const book = await Sellbooks.findById(id)
+      .populate("user", "fullname email mobileNumber");
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      book,
+    });
+  } catch (error) {
+    console.error("getBookById error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const updateSoldStatus = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: "Invalid book ID" });
+    }
+
+    const { soldstatus } = req.body;
+
+    const allowed = ["Instock", "Soldout"];
+    if (!soldstatus || !allowed.includes(soldstatus)) {
+      return res.status(400).json({
+        success: false,
+        error: "soldstatus must be 'Instock' or 'Soldout'",
+      });
+    }
+
+    const book = await Sellbooks.findOne({ _id: id, user: userId });
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        error: "Book not found or not authorized",
+      });
+    }
+
+    book.soldstatus = soldstatus;
+    await book.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Sold status updated successfully",
+      soldstatus: book.soldstatus,
+    });
+  } catch (error) {
+    console.error("updateSoldStatus error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+};
+
+module.exports = { Sellbook,getBookById,updateSoldStatus };
