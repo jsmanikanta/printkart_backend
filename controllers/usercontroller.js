@@ -285,9 +285,10 @@ export const getProfile = async (req, res) => {
         userData.rollno = !isEmpty(userData.rollno)
           ? userData.rollno
           : firstOrder.rollno;
+          userData.section = !isEmpty(userData.section)
+          ? userData.section
+          : firstOrder.section;
         userData.address = userData.address || firstOrder.address;
-
-        // optional: expose where fallback came from
         userData.fallbackFromFirstOrder = true;
       }
     }
