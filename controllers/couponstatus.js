@@ -24,14 +24,15 @@ const verifyCoupon = async (req, res) => {
       });
     }
 
-    if (!code || !code.trim()) {
+    if (!code || !String(code).trim()) {
       return res.status(400).json({
         success: false,
         error: "Coupon code is required",
       });
     }
 
-    const couponCode = code.trim().toUpperCase();
+    const couponCode = String(code).trim().toUpperCase();
+    const isReusable = couponCode === "MANAPRINTKART";
 
     const couponDoc = await mongoose.connection
       .collection("couponCodes")
@@ -45,11 +46,10 @@ const verifyCoupon = async (req, res) => {
       });
     }
 
-    const discount = couponDoc.discount;
-    const limit = couponDoc.limit ?? Infinity;
-    const used = couponDoc.used ?? 0;
-
-    if (used >= limit) {
+    const discount = Number(couponDoc.discount ?? 0);
+    const limit = Number(couponDoc.limit ?? 0); 
+    const used = Number(couponDoc.used ?? 0);
+    if (!isReusable && limit > 0 && used >= limit) {
       return res.status(400).json({
         success: false,
         status: "invalid",
@@ -62,8 +62,7 @@ const verifyCoupon = async (req, res) => {
       code: couponCode,
     });
 
-    // If already used by this user, do NOT send email again
-    if (existingStatus && existingStatus.status === true) {
+    if (existingStatus && existingStatus.status === true && !isReusable) {
       return res.status(200).json({
         success: true,
         status: "used",
@@ -83,8 +82,6 @@ const verifyCoupon = async (req, res) => {
     }
 
     const now = new Date();
-
-    // Create or update coupon status for user
     if (!existingStatus) {
       existingStatus = await Couponstatus.create({
         userid: userId,
@@ -96,10 +93,6 @@ const verifyCoupon = async (req, res) => {
         userEmail: email,
         userMobile: mobile,
       });
-
-      await mongoose.connection
-        .collection("couponCodes")
-        .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
     } else {
       existingStatus.status = true;
       existingStatus.discountPercentage = discount;
@@ -108,17 +101,33 @@ const verifyCoupon = async (req, res) => {
       existingStatus.userEmail = email;
       existingStatus.userMobile = mobile;
       await existingStatus.save();
-
-      await mongoose.connection
-        .collection("couponCodes")
-        .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
     }
 
-    // Send coupon usage confirmation email (non-blocking)
+    if (!isReusable) {
+      if (limit > 0) {
+        const upd = await mongoose.connection.collection("couponCodes").updateOne(
+          { _id: couponDoc._id, used: { $lt: limit } },
+          { $inc: { used: 1 } }
+        );
+
+        if (upd.modifiedCount === 0) {
+          return res.status(400).json({
+            success: false,
+            status: "invalid",
+            error: "Coupon expired",
+          });
+        }
+      } else {
+        await mongoose.connection
+          .collection("couponCodes")
+          .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
+      }
+    }
+
     if (email && process.env.RESEND_API_KEY) {
       try {
         await resend.emails.send({
-          from: "MyBookHub <admin@mybookhub.store>", // must be verified domain
+          from: "MyBookHub <admin@mybookhub.store>",
           to: email,
           subject: "Your Coupon Has Been Successfully Used 🎉",
           html: `
@@ -146,7 +155,9 @@ const verifyCoupon = async (req, res) => {
     return res.status(200).json({
       success: true,
       status: "applied",
-      message: "Coupon applied successfully",
+      message: isReusable
+        ? "Reusable coupon applied successfully"
+        : "Coupon applied successfully",
       data: {
         code: couponCode,
         discountPercentage: discount,
@@ -157,6 +168,7 @@ const verifyCoupon = async (req, res) => {
           email,
           mobile,
         },
+        reusable: isReusable,
       },
     });
   } catch (err) {
@@ -167,5 +179,6 @@ const verifyCoupon = async (req, res) => {
     });
   }
 };
+
 
 module.exports = { verifyCoupon };

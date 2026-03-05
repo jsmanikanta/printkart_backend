@@ -118,37 +118,7 @@ const Sellbook = async (req, res) => {
   }
 };
 
-const getBookById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid book ID",
-      });
-    }
 
-    const book = await Sellbooks.findById(id)
-      .populate("user", "fullname email mobileNumber");
-
-    if (!book) {
-      return res.status(404).json({
-        success: false,
-        message: "Book not found",
-      });
-    }
-    return res.status(200).json({
-      success: true,
-      book,
-    });
-  } catch (error) {
-    console.error("getBookById error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
 
 const updateSoldStatus = async (req, res) => {
   try {
@@ -198,4 +168,4 @@ const updateSoldStatus = async (req, res) => {
   }
 };
 
-module.exports = { Sellbook,getBookById,updateSoldStatus };
+module.exports = { Sellbook,updateSoldStatus };

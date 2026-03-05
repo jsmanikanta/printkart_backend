@@ -197,3 +197,11 @@ export const orderPrint = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const cancelOrder =async (req,res)=>{
+  try {
+    
+  } catch (error) {
+    
+  }
+}
