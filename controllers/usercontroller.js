@@ -18,19 +18,7 @@ const __dirname = path.dirname(__filename);
 const secretkey = process.env.SECRETKEY;
 
 export const Register = async (req, res) => {
-  const {
-    fullname,
-    mobileNumber,
-    email,
-    password,
-    birthday,
-    location,
-    usertype,
-    college,
-    year,
-    branch,
-    rollno,
-  } = req.body;
+  const { fullname, mobileNumber, email, password } = req.body;
 
   if (!fullname || !mobileNumber || !email || !password) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -49,13 +37,6 @@ export const Register = async (req, res) => {
       fullname,
       mobileNumber,
       email,
-      birthday,
-      location,
-      usertype,
-      college,
-      year,
-      branch,
-      rollno,
       password: hashedPassword,
     });
     await newUser.save();
@@ -106,16 +87,22 @@ export const login = async (req, res) => {
     } else if (phoneRegex.test(identifier)) {
       user = await User.findOne({ mobileNumber: identifier });
     } else {
-      return res.status(400).json({ success: false, error: "Invalid email or phone format" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid email or phone format" });
     }
 
     if (!user) {
-      return res.status(401).json({ success: false, error: "Invalid username or password" });
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid username or password" });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(401).json({ success: false, error: "Invalid username or password" });
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid username or password" });
     }
 
     const token = jwt.sign({ userId: user._id, role: user.role }, secretkey, {
@@ -130,7 +117,6 @@ export const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // ✅ include token in response too
     return res.status(200).json({
       success: true,
       token,
@@ -143,7 +129,9 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
   }
 };
 
@@ -252,19 +240,59 @@ export const getBooksById = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId; 
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
 
     const user = await User.findById(userId).select(
-      "fullname mobileNumber email birthday location usertype college year branch rollno",
+      "fullname mobileNumber email birthday usertype college year branch rollno",
     );
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    return res.status(200).json(user);
+
+    const userData = user.toObject();
+    const isEmpty = (v) =>
+      v === null || v === undefined || String(v).trim() === "";
+
+    const needsFallback =
+      isEmpty(userData.fullname) ||
+      isEmpty(userData.mobileNumber) ||
+      isEmpty(userData.college) ||
+      isEmpty(userData.year) ||
+      isEmpty(userData.rollno);
+
+    if (needsFallback) {
+      const firstOrder = await Prints.findOne({ userid: userId })
+        .sort({ orderDate: 1 })
+        .select("name mobile address college year rollno section orderDate");
+
+      if (firstOrder) {
+        userData.fullname = !isEmpty(userData.fullname)
+          ? userData.fullname
+          : firstOrder.name;
+        userData.mobileNumber = !isEmpty(userData.mobileNumber)
+          ? userData.mobileNumber
+          : firstOrder.mobile;
+        userData.college = !isEmpty(userData.college)
+          ? userData.college
+          : firstOrder.college;
+        userData.year = !isEmpty(userData.year)
+          ? userData.year
+          : firstOrder.year;
+        userData.rollno = !isEmpty(userData.rollno)
+          ? userData.rollno
+          : firstOrder.rollno;
+        userData.address = userData.address || firstOrder.address;
+
+        // optional: expose where fallback came from
+        userData.fallbackFromFirstOrder = true;
+      }
+    }
+
+    return res.status(200).json(userData);
   } catch (error) {
     console.error("Error fetching user data:", error);
     return res.status(500).json({ error: "Internal server error" });
