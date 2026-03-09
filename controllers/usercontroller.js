@@ -142,19 +142,22 @@ export function setupUploadsStatic(app) {
 export const getPrintsById = async (req, res) => {
   try {
     const userId = req.userId;
+
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
+
     const user = await User.findById(userId).select(
       "fullname mobileNumber email",
     );
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
     const orders = await Prints.find({ userid: userId })
       .select(
-        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description transctionid orderDate status",
+        "name mobile file originalprice discountprice color sides binding copies address college year section rollno description paymentMethod paymentStatus transactionId razorpayOrderId razorpayPaymentId razorpaySignature orderDate status createdAt updatedAt",
       )
       .sort({ orderDate: -1 });
 
@@ -166,28 +169,37 @@ export const getPrintsById = async (req, res) => {
       },
       orders: orders.map((order) => ({
         id: order._id,
-        name: order.name,
-        mobile: order.mobile,
-        file: order.file,
-        originalprice: order.originalprice,
-        discountprice: order.discountprice,
-        color: order.color,
-        sides: order.sides,
-        binding: order.binding,
-        copies: order.copies,
-        college: order.college,
-        year: order.year,
-        section: order.section,
-        address: order.address,
-        rollno: order.rollno,
-        description: order.description,
-        transctionid: order.transctionid,
-        orderDate: order.orderDate,
-        status: order.status,
+        name: order.name || "",
+        mobile: order.mobile || "",
+        file: order.file || "",
+        originalprice: order.originalprice ?? 0,
+        discountprice: order.discountprice ?? 0,
+        color: order.color || "",
+        sides: order.sides || "",
+        binding: order.binding || "",
+        copies: order.copies ?? 0,
+        college: order.college || "",
+        year: order.year || "",
+        section: order.section || "",
+        address: order.address || "",
+        rollno: order.rollno || "",
+        description: order.description || "",
+
+        paymentMethod: order.paymentMethod || "",
+        paymentStatus: order.paymentStatus || "",
+        transactionId: order.transactionId || "",
+        razorpayOrderId: order.razorpayOrderId || "",
+        razorpayPaymentId: order.razorpayPaymentId || "",
+        razorpaySignature: order.razorpaySignature || "",
+
+        orderDate: order.orderDate || null,
+        status: order.status || "",
+        createdAt: order.createdAt || null,
+        updatedAt: order.updatedAt || null,
       })),
     });
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("Error fetching user print orders:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -240,7 +252,7 @@ export const getBooksById = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const userId = req.userId; 
+    const userId = req.userId;
     if (!userId) {
       return res.status(400).json({ error: "User ID missing from token" });
     }
@@ -285,8 +297,8 @@ export const getProfile = async (req, res) => {
         userData.rollno = !isEmpty(userData.rollno)
           ? userData.rollno
           : firstOrder.rollno;
-          userData.section = !isEmpty(userData.section)
-          ? userData.section
+        userData.branch = !isEmpty(userData.branch)
+          ? userData.branch
           : firstOrder.section;
         userData.address = userData.address || firstOrder.address;
         userData.fallbackFromFirstOrder = true;
@@ -325,7 +337,6 @@ export const updateProfile = async (req, res) => {
   }
 
   try {
-    // check uniqueness for specific fields (if they are being updated)
     const orConditions = [];
     if (validUpdates.fullname)
       orConditions.push({ fullname: validUpdates.fullname });

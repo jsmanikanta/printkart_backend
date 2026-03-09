@@ -1,10 +1,10 @@
-import path from "path";
 import { Resend } from "resend";
 import dotenv from "dotenv";
 import User from "../models/user.js";
 import Prints from "../models/prints.js";
 import cloudinary from "cloudinary";
 import streamifier from "streamifier";
+
 dotenv.config();
 
 cloudinary.v2.config({
@@ -28,15 +28,21 @@ const uploadToCloudinary = async (buffer, folderName) => {
 
 export const orderPrint = async (req, res) => {
   try {
-    const userId = req.userId;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const userId = req.userId || req.user?._id;
+    const name = req.user?.fullname;
+    const email = req.user?.email;
+    const mobile = req.user?.mobileNumber;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const {
-      name,
-      mobile,
       color,
       sides,
       address,
@@ -49,81 +55,86 @@ export const orderPrint = async (req, res) => {
       description,
       binding,
       copies,
-      payment,
+      paymentMethod,
     } = req.body;
 
-    // validations
-    if (!color || !sides)
-      return res.status(400).json({ message: "Required fields missing" });
+    if (!name || !mobile) {
+      return res.status(400).json({
+        message: "User name or mobile number missing in profile",
+      });
+    }
 
-    if (!req.files?.file?.[0])
-      return res.status(400).json({ message: "Print PDF file is required" });
+    if (!color || !sides || !originalprice || !paymentMethod) {
+      return res.status(400).json({
+        message: "Required fields missing",
+      });
+    }
 
-    if (!payment)
-      return res.status(400).json({ message: "Payment method is required" });
+    if (!["Razorpay", "Pay on Delivery"].includes(paymentMethod)) {
+      return res.status(400).json({
+        message: "Invalid payment method",
+      });
+    }
+
+    if (!req.files?.file?.[0]) {
+      return res.status(400).json({
+        message: "Print PDF file is required",
+      });
+    }
 
     const MAX_SIZE = 10 * 1024 * 1024;
     const pdfFile = req.files.file[0];
-    if (pdfFile.size > MAX_SIZE)
-      return res
-        .status(400)
-        .json({ message: "PDF file size must be less than 10MB" });
+
+    if (pdfFile.size > MAX_SIZE) {
+      return res.status(400).json({
+        message: "PDF file size must be less than 10MB",
+      });
+    }
 
     const uploadedPrint = await uploadToCloudinary(
       pdfFile.buffer,
       "PrintOrders",
     );
-    if (!uploadedPrint?.secure_url)
-      return res.status(500).json({ message: "Failed to upload print file" });
 
-    let uploadedTransaction = null;
-    if (payment === "UPI") {
-      if (!req.files?.transctionid?.[0]) {
-        return res
-          .status(400)
-          .json({ message: "Transaction screenshot required for UPI" });
-      }
-      const trxFile = req.files.transctionid[0];
-      if (trxFile.size > MAX_SIZE) {
-        return res
-          .status(400)
-          .json({ message: "Transaction screenshot must be less than 10MB" });
-      }
-
-      uploadedTransaction = await uploadToCloudinary(
-        trxFile.buffer,
-        "Transactions",
-      );
-      if (!uploadedTransaction?.secure_url)
-        return res
-          .status(500)
-          .json({ message: "Failed to upload transaction screenshot" });
+    if (!uploadedPrint?.secure_url) {
+      return res.status(500).json({
+        message: "Failed to upload print file",
+      });
     }
+
     const newOrder = new Prints({
       name,
       mobile,
       file: uploadedPrint.secure_url,
-      originalprice,
-      discountprice,
+      originalprice: Number(originalprice),
+      discountprice:
+        discountprice !== undefined &&
+        discountprice !== null &&
+        discountprice !== ""
+          ? Number(discountprice)
+          : undefined,
       color,
       sides,
-      binding,
-      copies,
-      address,
-      college,
-      year,
-      section,
-      rollno,
-      description,
-      payment,
-      transctionid: uploadedTransaction ? uploadedTransaction.secure_url : "",
+      binding: binding || "none",
+      copies: copies ? Number(copies) : 1,
+      address: address || "",
+      college: college || user.college || "",
+      year: year || user.year || "",
+      section: section || "",
+      rollno: rollno || user.rollno || "",
+      description: description || "",
       userid: userId,
+      paymentMethod,
+      paymentStatus: "pending",
+      status: "Order placed",
     });
 
     await newOrder.save();
+
     const adminEmailHtml = `
       <h2>New print order placed by ${newOrder.name}</h2>
       <p>From the account ${user.fullname}</p>
+
       <h3>Order Details:</h3>
       <ul>
         <li><b>Name:</b> ${newOrder.name}</li>
@@ -133,19 +144,17 @@ export const orderPrint = async (req, res) => {
         <li><b>Binding:</b> ${newOrder.binding}</li>
         <li><b>Copies:</b> ${newOrder.copies}</li>
         <li><b>Original Price:</b> ${newOrder.originalprice}</li>
-        <li><b>Offer Price:</b> ${newOrder.discountprice}</li>
-        <li><b>Address:</b> ${newOrder.address}</li>
-        <li><b>College Info:</b> ${newOrder.college}, ${newOrder.year}, ${newOrder.section}, ${newOrder.rollno}</li>
+        <li><b>Discount Price:</b> ${newOrder.discountprice ?? "N/A"}</li>
+        <li><b>Address:</b> ${newOrder.address || "N/A"}</li>
+        <li><b>College Info:</b> ${newOrder.college || "N/A"}, ${newOrder.year || "N/A"}, ${newOrder.section || "N/A"}, ${newOrder.rollno || "N/A"}</li>
         <li><b>Description:</b> ${newOrder.description || "N/A"}</li>
-        <li><b>Payment Mode:</b> ${newOrder.payment}</li>
+        <li><b>Payment Method:</b> ${newOrder.paymentMethod}</li>
+        <li><b>Payment Status:</b> ${newOrder.paymentStatus}</li>
+        <li><b>Order Status:</b> ${newOrder.status}</li>
       </ul>
+
       <p><b>Order Date:</b> ${newOrder.orderDate.toLocaleString()}</p>
       <p><a href="${uploadedPrint.secure_url}" target="_blank">View Print File</a></p>
-      ${
-        uploadedTransaction?.secure_url
-          ? `<p><a href="${uploadedTransaction.secure_url}" target="_blank">View Transaction Screenshot</a></p>`
-          : ""
-      }
     `;
 
     await resend.emails.send({
@@ -155,53 +164,176 @@ export const orderPrint = async (req, res) => {
       html: adminEmailHtml,
     });
 
-    // Email to user
     try {
       await resend.emails.send({
         from: "MyBookHub <admin@mybookhub.store>",
-        to: user.email,
+        to: email,
         subject: "Thank You for Your Print Order",
         html: `
-      <h2>Hello ${user.fullname},</h2>
+          <h2>Hello ${user.fullname},</h2>
 
-      <p>Thank you for placing your print order with <b>MyBookHub</b>! 🖨️</p>
+          <p>Thank you for placing your print order with <b>MyBookHub</b>.</p>
+          <p>We have successfully received your request.</p>
 
-      <p>We have successfully received your request, and our team is preparing your documents for printing.</p>
+          <ul>
+            <li><b>Order Status:</b> ${newOrder.status}</li>
+            <li><b>Payment Status:</b> ${newOrder.paymentStatus}</li>
+            <li><b>Payment Method:</b> ${newOrder.paymentMethod}</li>
+            <li><b>Copies:</b> ${newOrder.copies}</li>
+            <li><b>Binding:</b> ${newOrder.binding}</li>
+            <li><b>Color:</b> ${newOrder.color}</li>
+            <li><b>Sides:</b> ${newOrder.sides}</li>
+          </ul>
 
-      <ul>
-        <li>Affordable pricing</li>
-        <li>Fast processing</li>
-        <li>Quality prints</li>
-      </ul>
+          ${
+            newOrder.paymentMethod === "Pay on Delivery"
+              ? `<p>You can pay at the time of delivery / collection.</p>`
+              : `<p>Please complete your payment through Razorpay to continue processing your order.</p>`
+          }
 
-      <p>You will be notified once your print order is ready for pickup or dispatched.</p>
-
-      <p>If you have any questions regarding your order, feel free to reply to this email — we're happy to help!</p>
-
-      <p>Thank you for choosing MyBookHub for your printing needs.</p>
-
-      <p>Best regards,<br/>
-      <b>The MyBookHub Team</b></p>
-    `,
+          <p>Best regards,<br/><b>The MyBookHub Team</b></p>
+        `,
       });
 
-      console.log("Print order confirmation email sent to:", user.email);
+      console.log("Print order confirmation email sent to:", email);
     } catch (emailError) {
       console.error("Failed to send print order email:", emailError);
     }
-    res
-      .status(201)
-      .json({ message: "Order placed successfully", order: newOrder });
+
+    return res.status(201).json({
+      success: true,
+      message: "Order created successfully",
+      order: newOrder,
+    });
   } catch (error) {
     console.error("Error placing order:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
   }
 };
 
-export const cancelOrder =async (req,res)=>{
+export const cancelOrder = async (req, res) => {
   try {
-    
+    const userId = req.userId || req.user?._id;
+    const name = req.user?.fullname;
+    const email = req.user?.email;
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID is required",
+      });
+    }
+
+    const order = await Prints.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.userid.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    if (order.status !== "Order placed") {
+      return res.status(400).json({
+        success: false,
+        message: "Order cannot be cancelled now",
+      });
+    }
+    order.status = "Cancelled";
+    await order.save();
+
+    if (email && process.env.RESEND_API_KEY) {
+      try {
+        await resend.emails.send({
+          from: "MyBookHub <admin@mybookhub.store>",
+          to: email,
+          subject: "Your Print Order Has Been Cancelled",
+          html: `
+            <h2>Hello ${name || "User"},</h2>
+
+            <p>Your print order has been <b>successfully cancelled</b>.</p>
+
+            <p><b>Order ID:</b> ${order._id}</p>
+            <p><b>Status:</b> Cancelled</p>
+            <p><b>Payment Method:</b> ${order.paymentMethod}</p>
+            <p><b>Date:</b> ${new Date().toLocaleString()}</p>
+
+            ${
+              order.paymentStatus === "paid"
+                ? `<p>Your refund will be <b>processed manually by the admin team</b>.</p>`
+                : `<p>No payment was completed for this order.</p>`
+            }
+
+            <p>If this cancellation was done by mistake, you can place a new order anytime.</p>
+
+            <p>Thank you for using <b> PrintKart</b>.</p>
+
+            <br/>
+            <p>Regards,<br/>MyBookHub Team</p>
+          `,
+        });
+
+        console.log("User cancellation email sent");
+      } catch (mailError) {
+        console.error("User email send error:", mailError);
+      }
+    }
+
+    try {
+      await resend.emails.send({
+        from: "Admin <admin@mybookhub.store>",
+        to: "printkart0001@gmail.com",
+        subject: "Print Order Cancelled by User",
+        html: `
+          <h2>Order Cancelled</h2>
+
+          <p>A user has cancelled a print order.</p>
+
+          <ul>
+            <li><b>User:</b> ${name}</li>
+            <li><b>Email:</b> ${email}</li>
+            <li><b>Order ID:</b> ${order._id}</li>
+            <li><b>Order Status:</b> Cancelled</li>
+            <li><b>Payment Method:</b> ${order.paymentMethod}</li>
+            <li><b>Payment Status:</b> ${order.paymentStatus}</li>
+          </ul>
+
+          ${
+            order.paymentStatus === "paid"
+              ? `<p><b>Action Required:</b> Process refund manually for this order.</p>`
+              : `<p>No refund required.</p>`
+          }
+
+          <p>Cancelled on: ${new Date().toLocaleString()}</p>
+        `,
+      });
+
+      console.log("Admin cancellation email sent");
+    } catch (mailError) {
+      console.error("Admin email send error:", mailError);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      order,
+    });
   } catch (error) {
-    
+    console.error("Cancel order error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
-}
+};

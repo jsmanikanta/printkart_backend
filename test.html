@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Razorpay Test</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+
+<body>
+
+<h2>Test Razorpay Payment</h2>
+
+<button id="payBtn">Pay Now</button>
+
+<script>
+
+document.getElementById("payBtn").onclick = function () {
+
+var options = {
+    "key": "rzp_test_SNzMxSPt0NgopF", 
+    "amount": 1500, 
+    "currency": "INR",
+    "name": "MyBookHub",
+    "description": "Print Order Payment",
+
+    "order_id": "order_SOCKRNQMC9cdCo",
+
+    "handler": function (response){
+
+        alert("Payment Successful!");
+
+        console.log("razorpay_payment_id:", response.razorpay_payment_id);
+        console.log("razorpay_order_id:", response.razorpay_order_id);
+        console.log("razorpay_signature:", response.razorpay_signature);
+
+    },
+
+    "prefill": {
+        "name": "Test User",
+        "email": "test@example.com"
+    },
+
+    "theme": {
+        "color": "#3399cc"
+    }
+};
+
+var rzp1 = new Razorpay(options);
+
+rzp1.open();
+
+};
+
+</script>
+
+</body>
+</html>

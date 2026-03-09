@@ -50,7 +50,7 @@ export const getLocationsbyId = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    const locations = await Location.find({userid: userId}).select(
+    const locations = await Location.find({ userid: userId }).select(
       "name mobilenumber state district pincode address landmark",
     );
     return res.status(200).json({

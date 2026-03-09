@@ -24,8 +24,11 @@ const orders = require("./routes/ordersroute");
 const admin = require("./routes/adminroute");
 const books = require("./routes/bookroute");
 const papers = require("./routes/papersroute");
-const coupon=require("./routes/couponroute");
-const location=require("./routes/locationroute");
+const coupon = require("./routes/couponroute");
+const location = require("./routes/locationroute");
+const payment = require("./routes/paymentroute");
+const { getImages } = require("./getimages");
+const wish = require("./routes/wishroute");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/orders", orders);
@@ -37,9 +40,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
-app.use("/anits",papers);
-app.use("/coupon",coupon);
-app.use("/locations",location);
+app.use("/anits", papers);
+app.use("/coupon", coupon);
+app.use("/locations", location);
+app.use("/payments", payment);
+app.get("/images", getImages);
+app.use("/wishlist", wish);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
