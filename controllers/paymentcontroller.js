@@ -5,14 +5,41 @@ const crypto = require("crypto");
 
 const Prints = PrintsImport.default || PrintsImport;
 
-if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-  throw new Error("Razorpay keys missing in environment variables");
+function getEnvValue(primary, fallback) {
+  return process.env[primary] || process.env[fallback] || "";
 }
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const RAZORPAY_KEY_ID = getEnvValue("RAZORPAY_KEY_ID", "RAZORPAY_KEY");
+const RAZORPAY_KEY_SECRET = getEnvValue(
+  "RAZORPAY_KEY_SECRET",
+  "RAZORPAY_SECRET",
+);
+
+function hasRazorpayKeys() {
+  return Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET);
+}
+
+function getRazorpayInstance() {
+  if (!hasRazorpayKeys()) {
+    throw new Error(
+      "Razorpay keys missing. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.",
+    );
+  }
+
+  return new Razorpay({
+    key_id: RAZORPAY_KEY_ID,
+    key_secret: RAZORPAY_KEY_SECRET,
+  });
+}
+
+function toNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function buildReceipt(printOrderId) {
+  return `p_${String(printOrderId).slice(-10)}`;
+}
 
 const createOrder = async (req, res) => {
   try {
@@ -30,6 +57,13 @@ const createOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "printOrderId is required",
+      });
+    }
+
+    if (!hasRazorpayKeys()) {
+      return res.status(500).json({
+        success: false,
+        message: "Razorpay keys are not configured on the server",
       });
     }
 
@@ -56,18 +90,18 @@ const createOrder = async (req, res) => {
       });
     }
 
-    const originalAmount = Number(printOrder.originalprice || 0);
+    const originalAmount = toNumber(printOrder.originalprice, 0);
     const discountedAmount =
       printOrder.discountprice !== undefined &&
       printOrder.discountprice !== null &&
       printOrder.discountprice !== ""
-        ? Number(printOrder.discountprice)
+        ? toNumber(printOrder.discountprice, originalAmount)
         : originalAmount;
 
     const finalAmount =
       discountedAmount > 0 ? discountedAmount : originalAmount;
 
-    if (!finalAmount || isNaN(finalAmount) || finalAmount <= 0) {
+    if (!finalAmount || Number.isNaN(finalAmount) || finalAmount <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid order amount",
@@ -78,15 +112,22 @@ const createOrder = async (req, res) => {
 
     const existingPendingPayment = await Payment.findOne({
       printOrderId: printOrder._id,
-      status: "created",
-    });
+      status: { $in: ["created", "pending"] },
+    }).sort({ createdAt: -1 });
 
-    if (existingPendingPayment && printOrder.razorpayOrderId) {
+    if (existingPendingPayment?.razorpayOrderId) {
+      if (!printOrder.razorpayOrderId) {
+        printOrder.razorpayOrderId = existingPendingPayment.razorpayOrderId;
+        printOrder.paymentMethod = "Razorpay";
+        printOrder.paymentStatus = "pending";
+        await printOrder.save();
+      }
+
       return res.status(200).json({
         success: true,
         message: "Existing Razorpay order found",
-        key: process.env.RAZORPAY_KEY_ID,
-        razorpayOrderId: printOrder.razorpayOrderId,
+        key: RAZORPAY_KEY_ID,
+        razorpayOrderId: existingPendingPayment.razorpayOrderId,
         amount: amountInPaise,
         currency: "INR",
         printOrderId: printOrder._id,
@@ -94,10 +135,12 @@ const createOrder = async (req, res) => {
       });
     }
 
+    const razorpay = getRazorpayInstance();
+
     const razorpayOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: "INR",
-      receipt: `print_${printOrder._id}`,
+      receipt: buildReceipt(printOrder._id),
       notes: {
         printOrderId: String(printOrder._id),
         userId: String(userId),
@@ -123,7 +166,7 @@ const createOrder = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Razorpay order created",
-      key: process.env.RAZORPAY_KEY_ID,
+      key: RAZORPAY_KEY_ID,
       razorpayOrderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
@@ -132,10 +175,11 @@ const createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("createOrder error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to create Razorpay order",
-      error: error.message,
+      error: error?.description || error?.message || "Unknown server error",
     });
   }
 };
@@ -169,6 +213,13 @@ const verifyPayment = async (req, res) => {
       });
     }
 
+    if (!RAZORPAY_KEY_SECRET) {
+      return res.status(500).json({
+        success: false,
+        message: "Razorpay secret is not configured on the server",
+      });
+    }
+
     const printOrder = await Prints.findById(printOrderId);
 
     if (!printOrder) {
@@ -194,7 +245,7 @@ const verifyPayment = async (req, res) => {
     }
 
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
@@ -220,21 +271,47 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    const payment = await Payment.findOne({
+    let payment = await Payment.findOne({
       razorpayOrderId: razorpay_order_id,
     });
 
     if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: "Payment record not found",
+      payment = await Payment.create({
+        userId,
+        printOrderId: printOrder._id,
+        razorpayOrderId: razorpay_order_id,
+        razorpayPaymentId: razorpay_payment_id,
+        razorpaySignature: razorpay_signature,
+        amount: toNumber(printOrder.originalprice, 0),
+        discount: Math.max(
+          toNumber(printOrder.originalprice, 0) -
+            toNumber(
+              printOrder.discountprice !== undefined &&
+                printOrder.discountprice !== null &&
+                printOrder.discountprice !== ""
+                ? printOrder.discountprice
+                : printOrder.originalprice,
+              0,
+            ),
+          0,
+        ),
+        finalAmount: toNumber(
+          printOrder.discountprice !== undefined &&
+            printOrder.discountprice !== null &&
+            printOrder.discountprice !== ""
+            ? printOrder.discountprice
+            : printOrder.originalprice,
+          0,
+        ),
+        currency: "INR",
+        status: "paid",
       });
+    } else {
+      payment.razorpayPaymentId = razorpay_payment_id;
+      payment.razorpaySignature = razorpay_signature;
+      payment.status = "paid";
+      await payment.save();
     }
-
-    payment.razorpayPaymentId = razorpay_payment_id;
-    payment.razorpaySignature = razorpay_signature;
-    payment.status = "paid";
-    await payment.save();
 
     printOrder.paymentStatus = "paid";
     printOrder.paymentMethod = "Razorpay";
@@ -251,10 +328,11 @@ const verifyPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("verifyPayment error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Server error during payment verification",
-      error: error.message,
+      error: error?.message || "Unknown server error",
     });
   }
 };
@@ -294,9 +372,14 @@ const paymentFailed = async (req, res) => {
       });
     }
 
-    await Payment.findOneAndUpdate({ razorpayOrderId }, { status: "failed" });
+    await Payment.findOneAndUpdate(
+      { razorpayOrderId },
+      { status: "failed" },
+      { new: true },
+    );
 
     printOrder.paymentStatus = "failed";
+    printOrder.razorpayOrderId = razorpayOrderId;
     await printOrder.save();
 
     return res.status(200).json({
@@ -305,12 +388,17 @@ const paymentFailed = async (req, res) => {
     });
   } catch (error) {
     console.error("paymentFailed error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to update payment status",
-      error: error.message,
+      error: error?.message || "Unknown server error",
     });
   }
 };
 
-module.exports = { createOrder, verifyPayment, paymentFailed };
+module.exports = {
+  createOrder,
+  verifyPayment,
+  paymentFailed,
+};
