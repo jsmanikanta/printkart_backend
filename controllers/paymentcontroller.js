@@ -1,7 +1,7 @@
-const Razorpay = require("razorpay");
-const Payment = require("../models/payments");
-const PrintsImport = require("../models/prints");
-const crypto = require("crypto");
+import Razorpay from "razorpay";
+import Payment from "../models/payments.js";
+import PrintsImport from "../models/prints.js";
+import crypto from "crypto";
 
 const Prints = PrintsImport.default || PrintsImport;
 
