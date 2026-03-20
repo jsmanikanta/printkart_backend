@@ -1,9 +1,10 @@
-const express = require("express");
-const router = express.Router();
+import express from "express";
 
-const usercontrol = require("../controllers/usercontroller");
-const { verifyToken } = require("../verifyToken");
-const forgot = require("../controllers/forgotpassword");
+import usercontrol from "../controllers/usercontroller.js";
+import { verifyToken } from "../verifyToken.js";
+import forgot from "../controllers/forgotpassword.js";
+
+const router = express.Router();
 
 router.post("/register", usercontrol.Register);
 router.post("/login", usercontrol.login);
