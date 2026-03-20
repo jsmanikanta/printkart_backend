@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../models/user.js";
 import { Resend } from "resend";
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const resetPasswordWithoutOTP = async (req, res) => {
