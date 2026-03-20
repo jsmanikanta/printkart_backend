@@ -1,5 +1,4 @@
-const mongoose = require("mongoose");
-
+import mongoose from "mongoose";
 const couponStatusSchema = new mongoose.Schema({
   userid: {
     type: mongoose.Schema.Types.ObjectId,
