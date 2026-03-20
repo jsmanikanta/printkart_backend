@@ -1,15 +1,15 @@
-const express = require("express");
-const router = express.Router();
-
-const {
+import express from "express";
+import {
   addToWishlist,
   removeFromWishlist,
   getMyWishlist,
   isBookWishlisted,
   toggleWishlist,
-} = require("../controllers/wishlistcontroller");
+} from "../controllers/wishlistcontroller.js";
 
-const { verifyToken } = require("../verifyToken");
+import { verifyToken } from "../verifyToken.js";
+
+const router = express.Router();
 
 router.post("/add", verifyToken, addToWishlist);
 router.delete("/remove/:bookId", verifyToken, removeFromWishlist);

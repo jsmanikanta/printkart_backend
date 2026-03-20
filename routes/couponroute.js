@@ -1,6 +1,6 @@
-const express = require("express");
-const { verifyCoupon } = require("../controllers/couponstatus");
-const { verifyToken } = require("../verifyToken");
+import express from "express";
+import { verifyCoupon } from "../controllers/couponstatus.js";
+import { verifyToken } from "../verifyToken.js";
 
 const router = express.Router();
 

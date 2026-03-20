@@ -1,11 +1,12 @@
-const express = require("express");
-const router = express.Router();
-const { verifyToken } = require("../verifyToken");
-const {
+import express from "express";
+import { verifyToken } from "../verifyToken.js";
+import {
   createOrder,
   verifyPayment,
   paymentFailed,
-} = require("../controllers/paymentcontroller");
+} from "../controllers/paymentcontroller.js";
+
+const router = express.Router();
 
 router.post("/create-order", verifyToken, createOrder);
 router.post("/verify-payment", verifyToken, verifyPayment);
