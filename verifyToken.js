@@ -1,10 +1,10 @@
-import User from "./models/user.js";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
+const User = require("./models/user");
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
 
 dotenv.config();
 
-export const verifyToken = async (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token =
     req.headers.token || (authHeader && authHeader.split(" ")[1]);
@@ -36,3 +36,5 @@ export const verifyToken = async (req, res, next) => {
     return res.status(403).json({ error: "Invalid token" });
   }
 };
+
+module.exports = verifyToken;
