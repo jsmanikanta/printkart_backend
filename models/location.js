@@ -1,36 +1,54 @@
 import mongoose from "mongoose";
-import User from "./user.js";
 
-const locationSchema=new mongoose.Schema({
-    name:{
-        type:String,
-        default:User.name,
+const locationSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    mobilenumber:{
-        type:String,
-        default:User.mobilenumber,
+    mobileNumber: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    state:{
-        type: String,
-        required:true,
+    state: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    district:{
-        type:String,
-        required:true,
+    district: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    pincode:{
-        type:String,
-        required:true,
+    pincode: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    address:{
-        type:String,
-        required:true,
+    address: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    landmark:{
-        type: String,
+    landmark: {
+      type: String,
+      default: "",
+      trim: true,
     },
-    userid: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
-});
+    userid: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-const Location=mongoose.model("Location",locationSchema);
-module.exports=Location;
+const Location =
+  mongoose.models.Location || mongoose.model("Location", locationSchema);
+
+export default Location;
