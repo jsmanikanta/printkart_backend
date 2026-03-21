@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const bookCategorySchema = new mongoose.Schema(
   {
@@ -15,7 +15,6 @@ const bookCategorySchema = new mongoose.Schema(
     image: {
       type: String,
       required: true,
-      trim: true,
     },
     folderType: {
       type: String,
@@ -23,11 +22,7 @@ const bookCategorySchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const BookCategory =
-  mongoose.models.BookCategory ||
-  mongoose.model("BookCategory", bookCategorySchema);
-
-export default BookCategory;
+module.exports = mongoose.model("BookCategory", bookCategorySchema);
