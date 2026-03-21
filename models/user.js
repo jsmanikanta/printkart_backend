@@ -1,46 +1,63 @@
 import mongoose from "mongoose";
 
-const userschema = new mongoose.Schema({
-  fullname: {
-    type: String,
-    required: true,
-    unique: true,
+const userSchema = new mongoose.Schema(
+  {
+    fullname: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    mobileNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    birthday: {
+      type: Date,
+    },
+    usertype: {
+      type: String,
+      enum: ["vendor", "user"],
+      default: "user",
+    },
+    college: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    year: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    branch: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    rollno: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
-  mobileNumber: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  birthday: {
-    type: Date,
-  },
-  usertype: {
-    type: String,
-    enum: ["vendor", "user"],
-    default: "user",
-  },
-  college: {
-    type: String,
-  },
-  year: {
-    type: String,
-  },
-  branch: {
-    type: String,
-  },
-  rollno: {
-    type: String,
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
-const User = mongoose.model("user", userschema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-module.exports = User;
+export default User;
