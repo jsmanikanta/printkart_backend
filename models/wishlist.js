@@ -1,26 +1,20 @@
-import mongoose from "mongoose";
+const express = require("express");
+const router = express.Router();
 
-const wishlistSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    book: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Sellbooks",
-      required: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+const {
+  addToWishlist,
+  removeFromWishlist,
+  getMyWishlist,
+  isBookWishlisted,
+  toggleWishlist,
+} = require("../controllers/wishlistcontroller");
 
-wishlistSchema.index({ user: 1, book: 1 }, { unique: true });
+const { verifyToken } = require("../verifyToken");
 
-const Wishlist =
-  mongoose.models.Wishlist || mongoose.model("Wishlist", wishlistSchema);
+router.post("/add", verifyToken, addToWishlist);
+router.delete("/remove/:bookId", verifyToken, removeFromWishlist);
+router.get("/my", verifyToken, getMyWishlist);
+router.get("/check/:bookId", verifyToken, isBookWishlisted);
+router.post("/toggle", verifyToken, toggleWishlist);
 
-export default Wishlist;
+module.exports = router;
