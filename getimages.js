@@ -1,48 +1,20 @@
-const BookCategory = require("./models/categeory");
+const express = require("express");
+const router = express.Router();
 
-exports.getImages = async (req, res) => {
-  try {
-    const { categeory, subcategeory, folderType } = req.query;
+const {
+  addToWishlist,
+  removeFromWishlist,
+  getMyWishlist,
+  isBookWishlisted,
+  toggleWishlist,
+} = require("../controllers/wishlistcontroller");
 
-    const filter = {};
+const { verifyToken } = require("../verifyToken");
 
-    if (categeory && categeory.trim()) {
-      filter.categeory = categeory.trim();
-    }
+router.post("/add", verifyToken, addToWishlist);
+router.delete("/remove/:bookId", verifyToken, removeFromWishlist);
+router.get("/my", verifyToken, getMyWishlist);
+router.get("/check/:bookId", verifyToken, isBookWishlisted);
+router.post("/toggle", verifyToken, toggleWishlist);
 
-    if (subcategeory && subcategeory.trim()) {
-      filter.subcategeory = subcategeory.trim();
-    }
-
-    if (folderType && folderType.trim()) {
-      filter.folderType = folderType.trim();
-    }
-
-    const images = await BookCategory.find(filter)
-      .select("categeory subcategeory image folderType -_id")
-      .sort({ createdAt: -1 });
-
-    const result = images.map((item) => ({
-      categeory: item.categeory || "",
-      subcategeory: item.subcategeory || "",
-      image: item.image || "",
-      folderType: item.folderType || "",
-      name:
-        item.folderType === "subcategory"
-          ? item.subcategeory || ""
-          : item.categeory || "",
-    }));
-
-    return res.status(200).json({
-      success: true,
-      count: result.length,
-      data: result,
-    });
-  } catch (error) {
-    console.error("getImages error:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Failed to fetch images",
-    });
-  }
-};
+module.exports = router;
