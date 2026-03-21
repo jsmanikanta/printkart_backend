@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const printSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -35,7 +36,7 @@ const printSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     userid: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      ref: "User",
       required: true,
     },
     paymentMethod: {
@@ -87,4 +88,6 @@ const printSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Prints", printSchema);
+const Prints = mongoose.models.Prints || mongoose.model("Prints", printSchema);
+
+export default Prints;
