@@ -1,169 +1,112 @@
 import mongoose from "mongoose";
 
-const sellbooksschema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
+const sellbooksSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    image: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+    },
+    condition: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    state: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    district: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    pincode: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    landmark: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    categeory: {
+      type: String,
+      enum: [
+        "School Books (Class 1-12)",
+        "College & University Books",
+        "Competitive Exam Books",
+        "Fictional Books",
+        "Non-Fiction Books",
+        "others",
+      ],
+      required: true,
+    },
+    subcategeory: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    selltype: {
+      type: String,
+      enum: ["sell", "donate"],
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["Pending", "Accepted", "Rejected"],
+      default: "Pending",
+    },
+    updatedPrice: {
+      type: Number,
+      default: null,
+    },
+    soldstatus: {
+      type: String,
+      enum: ["Instock", "Soldout", "Orderd"],
+      default: "Instock",
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    soldcount: {
+      type: Number,
+      default: 0,
+    },
+    date_added: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  image: {
-    type: String,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  condition: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-  },
-  state: {
-    type: String,
-    required: true,
-  },
-  district: {
-    type: String,
-    required: true,
-  },
-  pincode: {
-    type: String,
-    required: true,
-  },
-  address: {
-    type: String,
-    required: true,
-  },
-  landmark: {
-    type: String,
-  },
-  categeory: {
-    type: String,
-    enum: [
-      "School Books (Class 1-12)",
-      "College & University Books",
-      "Competitive Exam Books",
-      "Fictional Books",
-      "Non-Fiction Books",
-      "others",
-    ],
-    required: true,
-  },
-  subcategeory: {
-    type: String,
-    "School Books (Class 1-12)": [
-      "NCERT Books",
-      "CBSE Books",
-      "ICSE Books",
-      "State Board Books",
-      "IGCSE / IB Books",
-      "Science Stream (Class 11-12)",
-      "Commerce Stream (Class 11-12)",
-      "Arts / Humanities Stream (Class 11-12)",
-      "Others",
-    ],
-    "College & University Books": [
-      "B.A",
-      "B.COM",
-      "B.SC",
-      "B.TECH",
-      "BCA",
-      "BBA",
-      "LLB",
-      "MBBS",
-      "M.A",
-      "M.COM",
-      "M.SC",
-      "M.TECH",
-      "MCA",
-      "MBA",
-      "MD/MS",
-      "LLM",
-      "Certificate",
-      "Diploma",
-      "MPhil/PhD",
-      "Others",
-    ],
-    "Competitive Exam Books": [
-      "IIT JEE",
-      "NEET",
-      "UPSC",
-      "SSC",
-      "GATE",
-      "NDA",
-      "CAT",
-      "CUET",
-      "BITSAT",
-      "CLAT",
-      "State PCS",
-      "IELTS/ TOEFL",
-      "Others",
-    ],
-    "Fictional Books": [
-      "Manga",
-      "Children books",
-      "Picture books",
-      "Romance",
-      "Fantasy",
-      "Science Fiction",
-      "Mystery",
-      "Horror",
-      "Thriller",
-      "Action & Adventure",
-      "Young adult",
-      "Historical Fiction",
-      "Others",
-    ],
-    "Non-Fiction Books": [
-      "Self-Help",
-      "Biographies",
-      "Business & Finance",
-      "Health",
-      "History & Humanities",
-      "Language Learning",
-      "Lifestyle",
-      "Cooking, Food & Wine",
-      "Music",
-      "Personal & Social Issues",
-      "Religion",
-      "Sports",
-      "Transportation & Travel",
-      "Dictionary",
-      "Encyclopedia",
-      "Others",
-    ],
-  },
-  selltype: {
-    type: String,
-    enum: ["sell", "donate"],
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ["Pending", "Accepted", "Rejected"],
-    default: "Pending",
-  },
-  updatedPrice: {
-    type: Number,
-  },
-  soldstatus: {
-    type: String,
-    enum: ["Instock", "Soldout", "Orderd"],
-    default: "Instock",
-  },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
-    required: true,
-  },
-  soldcount: {
-    type: Number,
-    default: 0,
-  },
-  date_added: { type: Date, default: Date.now },
-});
+  {
+    timestamps: true,
+  }
+);
 
-const Sellbooks = mongoose.model("Sellbooks", sellbooksschema);
-module.exports = Sellbooks;
+const Sellbooks =
+  mongoose.models.Sellbooks || mongoose.model("Sellbooks", sellbooksSchema);
+
+export default Sellbooks;
