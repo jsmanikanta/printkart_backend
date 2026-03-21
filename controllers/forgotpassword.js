@@ -1,157 +1,69 @@
-import mongoose from "mongoose";
-import Couponstatus from "../models/coupon.js";
+import bcrypt from "bcryptjs";
+import User from "../models/user.js";
 import { Resend } from "resend";
-
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export const verifyCoupon = async (req, res) => {
+export const resetPasswordWithoutOTP = async (req, res) => {
+  const { identifier, newPassword } = req.body;
+
+  if (!identifier || !newPassword)
+    return res
+      .status(400)
+      .json({ error: "Identifier and new password are required" });
+
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        error: "Database not ready",
-      });
-    }
+    let user;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^\d{10}$/;
 
-    const userId = req.user?.id || req.user?._id;
-    const { name, email, mobile } = req.user || {};
-    const { code } = req.body;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: "User not authenticated",
-      });
-    }
-
-    if (!code || !code.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: "Coupon code is required",
-      });
-    }
-
-    const couponCode = code.trim().toUpperCase();
-
-    const couponDoc = await mongoose.connection
-      .collection("couponCodes")
-      .findOne({ code: couponCode });
-
-    if (!couponDoc) {
-      return res.status(404).json({
-        success: false,
-        status: "invalid",
-        error: "Coupon code not found",
-      });
-    }
-
-    const discount = couponDoc.discount;
-    const limit = couponDoc.limit ?? Infinity;
-    const used = couponDoc.used ?? 0;
-
-    if (used >= limit) {
-      return res.status(400).json({
-        success: false,
-        status: "invalid",
-        error: "Coupon expired",
-      });
-    }
-
-    let existingStatus = await Couponstatus.findOne({
-      userid: userId,
-      code: couponCode,
-    });
-
-    if (existingStatus && existingStatus.status === true) {
-      return res.status(200).json({
-        success: true,
-        status: "used",
-        message: "Coupon already used by this user",
-        data: {
-          code: couponCode,
-          discountPercentage: existingStatus.discountPercentage,
-          usedDate: existingStatus.usedDate,
-          user: {
-            id: userId,
-            name: existingStatus.userName,
-            email: existingStatus.userEmail,
-            mobile: existingStatus.userMobile,
-          },
-        },
-      });
-    }
-
-    const now = new Date();
-
-    if (!existingStatus) {
-      existingStatus = await Couponstatus.create({
-        userid: userId,
-        code: couponCode,
-        status: true,
-        discountPercentage: discount,
-        usedDate: now,
-        userName: name,
-        userEmail: email,
-        userMobile: mobile,
-      });
+    if (emailRegex.test(identifier)) {
+      user = await User.findOne({ email: identifier });
+    } else if (phoneRegex.test(identifier)) {
+      user = await User.findOne({ mobileNumber: identifier });
     } else {
-      existingStatus.status = true;
-      existingStatus.discountPercentage = discount;
-      existingStatus.usedDate = now;
-      existingStatus.userName = name;
-      existingStatus.userEmail = email;
-      existingStatus.userMobile = mobile;
-      await existingStatus.save();
+      return res
+        .status(400)
+        .json({ error: "Invalid email or phone number format" });
     }
 
-    await mongoose.connection
-      .collection("couponCodes")
-      .updateOne({ _id: couponDoc._id }, { $inc: { used: 1 } });
-
-    if (email && process.env.RESEND_API_KEY) {
-      try {
-        await resend.emails.send({
-          from: "MyBookHub <admin@mybookhub.store>",
-          to: email,
-          subject: "Your Coupon Has Been Successfully Used 🎉",
-          html: `
-            <h2>Hello ${name || "there"},</h2>
-            <p>You have successfully applied your coupon on <b>MyBookHub</b>.</p>
-            <p><b>Coupon Code:</b> ${couponCode}</p>
-            <p><b>Discount:</b> ${discount}%</p>
-            <p><b>Used On:</b> ${now.toLocaleString()}</p>
-            <p>We hope you enjoy your savings! 🎉</p>
-            <p>Best regards,<br/><b>The MyBookHub Team</b></p>
-          `,
-        });
-
-        console.log("Coupon usage email sent to:", email);
-      } catch (emailError) {
-        console.error("Failed to send coupon email:", emailError);
-      }
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    return res.status(200).json({
-      success: true,
-      status: "applied",
-      message: "Coupon applied successfully",
-      data: {
-        code: couponCode,
-        discountPercentage: discount,
-        usedDate: existingStatus.usedDate,
-        user: {
-          id: userId,
-          name,
-          email,
-          mobile,
-        },
-      },
-    });
-  } catch (err) {
-    console.error("Error verifying coupon:", err);
-    return res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    try {
+      await resend.emails.send({
+        from: "MyBookHub <admin@mybookhub.store>", // must be verified domain
+        to: user.email,
+        subject: "Your Password Has Been Reset Successfully 🔐",
+        html: `
+      <h2>Hello ${user.fullname},</h2>
+
+      <p>Your password has been successfully reset for your <b>MyBookHub</b> account.</p>
+
+      <p>If you made this change, no further action is required.</p>
+
+      <p><b>If you did NOT request this password reset, please contact us immediately</b> by replying to this email.</p>
+
+      <p>For security reasons, we recommend keeping your password confidential and avoiding sharing it with anyone.</p>
+
+      <p>Stay secure,<br/>
+      <b>The MyBookHub Team</b></p>
+    `,
+      });
+
+      console.log("Password reset email sent to:", user.email);
+    } catch (emailError) {
+      console.error("Failed to send password reset email:", emailError);
+    }
+
+    res
+      .status(200)
+      .json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Error resetting password without OTP:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
