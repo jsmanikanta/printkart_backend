@@ -1,63 +1,46 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema(
-  {
-    fullname: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    mobileNumber: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    birthday: {
-      type: Date,
-    },
-    usertype: {
-      type: String,
-      enum: ["vendor", "user"],
-      default: "user",
-    },
-    college: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    year: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    branch: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    rollno: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+const userschema = new mongoose.Schema({
+  fullname: {
+    type: String,
+    required: true,
+    unique: true,
   },
-  {
-    timestamps: true,
-  }
-);
+  mobileNumber: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  birthday: {
+    type: Date,
+  },
+  usertype: {
+    type: String,
+    enum: ["vendor", "user"],
+    default: "user",
+  },
+  college: {
+    type: String,
+  },
+  year: {
+    type: String,
+  },
+  branch: {
+    type: String,
+  },
+  rollno: {
+    type: String,
+  },
+});
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
+const User = mongoose.model("user", userschema);
 
-export default User;
+module.exports = User;
