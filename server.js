@@ -30,15 +30,13 @@ const payment = require("./routes/paymentroute");
 const { getImages } = require("./getimages");
 const wish = require("./routes/wishroute");
 
-// Middlewares
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/orders", orders);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static files
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-// Routes
-app.use("/orders", orders);
+// Other routes
 app.use("/user", userroute);
 app.use("/books", books);
 app.use("/admin", admin);
@@ -49,8 +47,11 @@ app.use("/payments", payment);
 app.get("/images", getImages);
 app.use("/wishlist", wish);
 
+// Serve static files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Start server
-const port = process.env.PORT || 5000;
+const port = process.env.port || 5000;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
