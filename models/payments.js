@@ -1,10 +1,10 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const paymentSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "user",
       required: true,
     },
     printOrderId: {
@@ -15,17 +15,14 @@ const paymentSchema = new mongoose.Schema(
     razorpayOrderId: {
       type: String,
       required: true,
-      trim: true,
     },
     razorpayPaymentId: {
       type: String,
       default: "",
-      trim: true,
     },
     razorpaySignature: {
       type: String,
       default: "",
-      trim: true,
     },
     amount: {
       type: Number,
@@ -42,7 +39,6 @@ const paymentSchema = new mongoose.Schema(
     currency: {
       type: String,
       default: "INR",
-      trim: true,
     },
     status: {
       type: String,
@@ -53,6 +49,4 @@ const paymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Payment = mongoose.models.Payment || mongoose.model("Payment", paymentSchema);
-
-export default Payment;
+module.exports = mongoose.model("Payment", paymentSchema);
